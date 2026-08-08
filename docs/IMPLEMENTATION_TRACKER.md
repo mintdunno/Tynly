@@ -36,7 +36,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 2 — Settings, messaging, security, and errors
 
-[ ] Define versioned AppSettings and discriminated provider-profile types.
+- [-] Define versioned AppSettings and discriminated provider-profile types.
 [ ] Implement defaults for language, behavior, controls, styles, and providers.
 [ ] Implement migrations with malformed-state recovery.
 [ ] Restrict local storage to trusted contexts.
