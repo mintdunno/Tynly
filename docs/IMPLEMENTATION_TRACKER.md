@@ -57,7 +57,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 - [x] Implement conservative result sanitizer.
 - [x] Implement operation IDs, cancellation contracts, and freshness validation.
 - [x] Test prompt, style, sanitizer, limit, cancellation, and stale-result behavior.
-- [-] Review and commit Phase 3.
+- [x] Review and commit Phase 3 (e7f0030).
 
 ## Phase 4 — Provider foundation, OpenAI-compatible APIs, and Ollama
 
