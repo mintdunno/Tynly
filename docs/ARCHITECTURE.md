@@ -44,6 +44,10 @@ Tynly does not request tabs, activeTab, commands, notifications, identity, histo
 - Input adapters own editor quirks only and never call providers.
 - Chrome APIs are accessed through small browser abstractions.
 
+## Brand asset system
+
+The canonical mark is assets/brand/tynly-mark.svg. A deterministic build script renders the manifest's 16, 32, 48, and 128 pixel PNG assets under public/icons. The monochrome SVG preserves the same geometry for future UI contexts. Content controls will reuse the canonical mark rather than Unicode emoji.
+
 ## Performance rules
 
 - No polling, full-page scan, continuous AI checks, or automatic language detection.

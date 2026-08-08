@@ -28,11 +28,11 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 - [x] Add linting, formatting checks, unit-test setup, and browser-test setup.
 - [x] Define product identity constants and centralized UI strings.
 - [x] Define minimum required Chrome permissions and document their rationale.
-- [-] Create original canonical Tynly SVG assets.
-- [-] Generate and validate 16, 32, 48, and 128 pixel manifest icons.
+- [x] Create original canonical Tynly SVG assets.
+- [x] Generate and validate 16, 32, 48, and 128 pixel manifest icons.
 - [x] Verify typecheck, lint, unit harness, build, and unpacked extension load.
 - [x] Review and commit the foundation.
-[ ] Review and commit the brand asset system.
+- [x] Review and commit the brand asset system.
 
 ## Phase 2 — Settings, messaging, security, and errors
 
