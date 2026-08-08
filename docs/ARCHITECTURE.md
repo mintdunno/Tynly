@@ -18,6 +18,12 @@ Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 5. The controller rejects stale/disconnected/changed targets. A valid result is replaced, previewed, or displayed in a page-selection popover.
 6. A successful editable replacement creates a short-lived, validated Undo record.
 
+## Transform safety rules
+
+- Prompt construction is centralized and provider-neutral. A single compact prompt names the source/target language, applies the resolved style, fixes ordinary text issues, preserves meaning, and asks for text-only output. Auto source detection is part of that same request; the input is appended once beneath an unambiguous `Text:` delimiter.
+- There is one active transform operation per stable editor or selection scope. Starting a newer operation aborts the earlier signal. A result is consumed only once when its scope and operation ID still match; cancelled, superseded, wrong-scope, and already-consumed results cannot apply. Target revision checks remain the final DOM safety gate.
+- Provider output is sanitized conservatively. Tynly trims outer whitespace and removes only an unmistakable full-output label, one enclosing code fence, or simple enclosing quotes. It rejects empty/non-text output and preserves potentially meaningful prose, labels, quotes, and multiple fences.
+
 ## Security and privacy
 
 - Content scripts never receive API keys or raw provider configuration.

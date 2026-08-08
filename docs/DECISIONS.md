@@ -53,3 +53,21 @@ Tynly needs storage for local configuration, clipboardWrite for an explicit copy
 Status: accepted.
 
 Redacting known secret fields is insufficient because persisted settings can contain malformed or future unknown properties. The background validates exact data shapes and creates content snapshots property-by-property. Custom-style instructions are private prompt configuration, so content sees only their ID and display name. Cross-context error payloads likewise use fixed messages selected by error code rather than attempting to redact arbitrary provider diagnostics.
+
+## ADR-010 — Centralize compact prompt construction
+
+Status: accepted.
+
+One provider-neutral builder creates the complete prompt from the validated language pair, resolved style, and text. Auto source detection stays in that request rather than triggering a separate detection call. The builder includes the source text exactly once and requires text-only output, keeping provider adapters free of prompt policy and preventing divergent trigger behavior.
+
+## ADR-011 — Gate results through one operation per scope
+
+Status: accepted.
+
+Each stable editor or selection scope has at most one active operation. A replacement request aborts its predecessor, and a result must claim the current matching operation exactly once before it can reach UI or editor replacement. This provides cancellation and stale-result protection independently of DOM-level revision checks.
+
+## ADR-012 — Sanitize only unambiguous provider wrappers
+
+Status: accepted.
+
+Provider output is not rewritten for style or meaning after it returns. The sanitizer removes only a whole-output label, a single enclosing fence, or simple enclosing quotes, then rejects empty/non-text values. Ambiguous labels, embedded quotes, prose, and multiple fences remain intact so Tynly does not destroy legitimate user content.

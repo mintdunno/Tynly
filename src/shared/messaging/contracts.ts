@@ -2,7 +2,10 @@ import {
   isContentSettingsSnapshot,
   type ContentSettingsSnapshot
 } from '../../core/settings/schema.ts';
+import { TRANSFORM_TRIGGERS, type TransformTrigger } from '../../core/transform/types.ts';
 import { isSerializedAppError, type SerializedAppError } from '../errors/index.ts';
+
+export type { TransformTrigger } from '../../core/transform/types.ts';
 
 export const MESSAGE_TYPES = {
   cancelTransform: 'tynly.transform.cancel',
@@ -15,8 +18,6 @@ export const MESSAGE_TYPES = {
 
 export const MAX_MESSAGE_ID_LENGTH = 128;
 export const MAX_TRANSFORM_TEXT_LENGTH = 50_000;
-
-export type TransformTrigger = 'field-button' | 'selection-button' | 'shortcut';
 
 export interface TransformRequestMessage {
   readonly operationId: string;
@@ -67,11 +68,7 @@ export type ResponseMessage =
 type UnknownRecord = Record<string, unknown>;
 
 const MESSAGE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
-const TRANSFORM_TRIGGERS = new Set<TransformTrigger>([
-  'field-button',
-  'selection-button',
-  'shortcut'
-]);
+const TRANSFORM_TRIGGER_SET = new Set<TransformTrigger>(TRANSFORM_TRIGGERS);
 
 function isRecord(value: unknown): value is UnknownRecord {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -128,7 +125,7 @@ function isTransformText(value: unknown): value is string {
 }
 
 function isTransformTrigger(value: unknown): value is TransformTrigger {
-  return typeof value === 'string' && TRANSFORM_TRIGGERS.has(value as TransformTrigger);
+  return typeof value === 'string' && TRANSFORM_TRIGGER_SET.has(value as TransformTrigger);
 }
 
 function isTransformRequestMessage(value: unknown): value is TransformRequestMessage {

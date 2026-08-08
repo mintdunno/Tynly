@@ -50,14 +50,14 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 3 — Transform domain and response safety
 
-[ ] Define transform request/result, operation, and language/style types.
-[ ] Implement centralized compact known-source and Auto-source prompts.
-[ ] Implement built-in/custom style validation and language swap rules.
-[ ] Implement output-budget heuristic and input limits.
-[ ] Implement conservative result sanitizer.
-[ ] Implement operation IDs, cancellation contracts, and freshness validation.
-[ ] Test prompt, style, sanitizer, limit, cancellation, and stale-result behavior.
-[ ] Review and commit Phase 3.
+- [x] Define transform request/result, operation, and language/style types.
+- [x] Implement centralized compact known-source and Auto-source prompts.
+- [x] Implement built-in/custom style validation and language swap rules.
+- [x] Implement output-budget heuristic and input limits.
+- [x] Implement conservative result sanitizer.
+- [x] Implement operation IDs, cancellation contracts, and freshness validation.
+- [x] Test prompt, style, sanitizer, limit, cancellation, and stale-result behavior.
+- [-] Review and commit Phase 3.
 
 ## Phase 4 — Provider foundation, OpenAI-compatible APIs, and Ollama
 
