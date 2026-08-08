@@ -21,17 +21,17 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 1 — MV3 foundation and brand system
 
-- [-] Select and pin pnpm dependencies without adding unnecessary runtime libraries.
-[ ] Add strict TypeScript configuration and project scripts.
-[ ] Add Vite/Manifest V3 build configuration.
-[ ] Add service worker, content, popup, and settings entry-point shells.
-[ ] Add linting, formatting checks, unit-test setup, and browser-test setup.
-[ ] Define product identity constants and centralized UI strings.
-[ ] Define minimum required Chrome permissions and document their rationale.
-[ ] Create original canonical Tynly SVG assets.
-[ ] Generate and validate 16, 32, 48, and 128 pixel manifest icons.
-[ ] Verify typecheck, lint, unit harness, build, and unpacked extension load.
-[ ] Review and commit the foundation.
+- [x] Select and pin pnpm dependencies without adding unnecessary runtime libraries.
+- [x] Add strict TypeScript configuration and project scripts.
+- [x] Add Vite/Manifest V3 build configuration.
+- [x] Add service worker, content, popup, and settings entry-point shells.
+- [x] Add linting, formatting checks, unit-test setup, and browser-test setup.
+- [x] Define product identity constants and centralized UI strings.
+- [x] Define minimum required Chrome permissions and document their rationale.
+- [-] Create original canonical Tynly SVG assets.
+- [-] Generate and validate 16, 32, 48, and 128 pixel manifest icons.
+- [x] Verify typecheck, lint, unit harness, build, and unpacked extension load.
+- [x] Review and commit the foundation.
 [ ] Review and commit the brand asset system.
 
 ## Phase 2 — Settings, messaging, security, and errors

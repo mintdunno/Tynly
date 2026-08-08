@@ -28,6 +28,14 @@ Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 - Custom JSON APIs use data-only templates and safe paths; no eval or arbitrary JavaScript.
 - Browser host access is used only because Tynly must operate in text fields across normal web pages. No background network activity occurs until a user action.
 
+## Initial Manifest permissions
+
+- storage: required for local-only settings and provider configuration.
+- clipboardWrite: required only after an explicit Copy action in a Tynly result UI.
+- http and https host access: required to show Tynly controls in normal browser text fields and to call user-configured provider endpoints. Chrome-restricted pages and file URLs are intentionally outside the initial scope.
+
+Tynly does not request tabs, activeTab, commands, notifications, identity, history, downloads, scripting, or externally connectable access in the initial manifest.
+
 ## Extension boundaries
 
 - The content bundle uses vanilla TypeScript and Shadow DOM; it cannot import provider SDKs or Preact.

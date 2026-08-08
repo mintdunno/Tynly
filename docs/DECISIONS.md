@@ -41,3 +41,9 @@ Every replacement is guarded by operation IDs and target revision validation. Se
 Status: accepted.
 
 The root plan, approved-plan record, live tracker, and ADR log are required project artifacts. Each implementation phase is reviewed and committed independently under AGENTS.md rules.
+
+## ADR-008 — Use the minimum practical initial Manifest permissions
+
+Status: accepted.
+
+Tynly needs storage for local configuration, clipboardWrite for an explicit copy action, and HTTP/HTTPS host access because it must render controls in normal browser text fields and call user-selected providers. It deliberately omits tabs, activeTab, commands, notifications, and broad unrelated APIs. The permission rationale is maintained in docs/ARCHITECTURE.md.
