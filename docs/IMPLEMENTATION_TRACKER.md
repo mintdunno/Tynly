@@ -36,17 +36,17 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 2 — Settings, messaging, security, and errors
 
-- [-] Define versioned AppSettings and discriminated provider-profile types.
-[ ] Implement defaults for language, behavior, controls, styles, and providers.
-[ ] Implement migrations with malformed-state recovery.
-[ ] Restrict local storage to trusted contexts.
-[ ] Separate private provider secrets from public content settings.
-[ ] Add redacted provider summaries and write-only secret updates.
-[ ] Add typed extension message contracts and runtime validation.
-[ ] Add browser API wrappers and background message router.
-[ ] Add typed user-safe error model and secret-safe logger.
-[ ] Test defaults, migrations, message validation, and redaction.
-[ ] Review and commit Phase 2.
+- [x] Define versioned AppSettings and discriminated provider-profile types.
+- [x] Implement defaults for language, behavior, controls, styles, and providers.
+- [x] Implement migrations with malformed-state recovery.
+- [x] Restrict local storage to trusted contexts.
+- [x] Separate private provider secrets from public content settings.
+- [x] Add redacted provider summaries and write-only secret updates.
+- [x] Add typed extension message contracts and runtime validation.
+- [x] Add browser API wrappers and background message router.
+- [x] Add typed user-safe error model and secret-safe logger.
+- [x] Test defaults, migrations, message validation, and redaction.
+- [-] Review and commit Phase 2.
 
 ## Phase 3 — Transform domain and response safety
 

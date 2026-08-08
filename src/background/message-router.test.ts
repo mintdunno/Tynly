@@ -88,7 +88,9 @@ describe('BackgroundMessageRouter', () => {
       )
     ).resolves.toBeNull();
 
-    await expect(router.handle({ type: 'unknown' }, trustedSender, extensionId)).resolves.toBeNull();
+    await expect(
+      router.handle({ type: 'unknown' }, trustedSender, extensionId)
+    ).resolves.toBeNull();
   });
 
   it('returns a typed safe error until transform providers are implemented', async () => {

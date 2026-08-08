@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createDefaultAppSettings } from './defaults.ts';
 import { migrateAppSettings, migrateSettings } from './migrations.ts';
+import { isAppSettings } from './schema.ts';
 
 describe('migrateAppSettings', () => {
   it('migrates a legacy shape while retaining valid user choices', () => {
@@ -108,5 +109,23 @@ describe('migrateAppSettings', () => {
     expect(result).toMatchObject({ migrated: false, recovered: false });
     expect(source.controls.shortcut.shortcut.alt).toBe(true);
     expect(source.language.source).toBe('vi');
+  });
+
+  it('bounds recovered custom styles so migrations always return valid settings', () => {
+    const customStyles = Array.from({ length: 31 }, (_, index) => ({
+      id: `style-${index + 1}`,
+      name: `Style ${index + 1}`,
+      instruction: 'Use concise, natural language.'
+    }));
+
+    const result = migrateAppSettings({
+      version: 0,
+      customStyles,
+      selectedStyle: 'style-1'
+    });
+
+    expect(result.settings.styles.custom).toHaveLength(30);
+    expect(result.settings.styles.selected).toEqual({ kind: 'custom', id: 'style-1' });
+    expect(isAppSettings(result.settings)).toBe(true);
   });
 });

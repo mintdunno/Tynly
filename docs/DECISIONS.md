@@ -47,3 +47,9 @@ The root plan, approved-plan record, live tracker, and ADR log are required proj
 Status: accepted.
 
 Tynly needs storage for local configuration, clipboardWrite for an explicit copy action, and HTTP/HTTPS host access because it must render controls in normal browser text fields and call user-selected providers. It deliberately omits tabs, activeTab, commands, notifications, and broad unrelated APIs. The permission rationale is maintained in docs/ARCHITECTURE.md.
+
+## ADR-009 — Use allow-list projections for every content-visible setting
+
+Status: accepted.
+
+Redacting known secret fields is insufficient because persisted settings can contain malformed or future unknown properties. The background validates exact data shapes and creates content snapshots property-by-property. Custom-style instructions are private prompt configuration, so content sees only their ID and display name. Cross-context error payloads likewise use fixed messages selected by error code rather than attempting to redact arbitrary provider diagnostics.

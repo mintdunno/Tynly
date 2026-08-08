@@ -1,9 +1,5 @@
-import { SettingsStore } from '../core/settings/settings-store.ts';
-import {
-  AppError,
-  serializeAppError,
-  type SerializedAppError
-} from '../shared/errors/index.ts';
+import type { SettingsStore } from '../core/settings/settings-store.ts';
+import { AppError, serializeAppError } from '../shared/errors/index.ts';
 import {
   MESSAGE_TYPES,
   parseRequestMessage,
@@ -70,6 +66,6 @@ function toErrorResponse(message: RequestMessage, error: unknown): TransformErro
     type: MESSAGE_TYPES.transformError,
     requestId: message.requestId,
     operationId: 'operationId' in message ? message.operationId : message.requestId,
-    error: serializeAppError(error) as SerializedAppError
+    error: serializeAppError(error)
   };
 }

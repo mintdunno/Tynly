@@ -3,13 +3,14 @@ import { describe, expect, it } from 'vitest';
 import {
   AppError,
   deserializeAppError,
+  getAppErrorUserMessage,
   isSerializedAppError,
   redactSensitiveValue,
   serializeAppError
 } from './index.ts';
 
 describe('application errors', () => {
-  it('serializes typed errors as user-safe, credential-free data', () => {
+  it('serializes typed errors with only their fixed user-safe message', () => {
     const error = new AppError('AUTHENTICATION', 'Provider returned Bearer super-secret-token', {
       details: {
         authorization: 'Bearer super-secret-token',
@@ -22,15 +23,39 @@ describe('application errors', () => {
 
     const serialized = serializeAppError(error);
 
-    expect(serialized.code).toBe('AUTHENTICATION');
-    expect(serialized.retryable).toBe(false);
+    expect(serialized).toEqual({
+      code: 'AUTHENTICATION',
+      message: getAppErrorUserMessage('AUTHENTICATION'),
+      retryable: false
+    });
     expect(serialized.message).not.toContain('super-secret-token');
     expect(JSON.stringify(serialized)).not.toContain('super-secret-token');
     expect(JSON.stringify(serialized)).not.toContain('sk-1234567890');
-    expect(serialized.details).toMatchObject({
-      authorization: '[REDACTED]',
-      nested: { apiKey: '[REDACTED]', status: 401 }
+    expect(serialized).not.toHaveProperty('details');
+  });
+
+  it('never serializes Basic authorization or URL credentials supplied by a caller', () => {
+    const basicAuthorization = 'Authorization: Basic dXNlcjpwYXNz';
+    const credentialedUrl = 'https://user:pass@provider.example.test/v1';
+    const serialized = serializeAppError(
+      new AppError('NETWORK', `${basicAuthorization}; ${credentialedUrl}`, {
+        details: {
+          authorization: basicAuthorization,
+          endpoint: credentialedUrl,
+          reason: 'provider diagnostics'
+        }
+      })
+    );
+    const serializedText = JSON.stringify(serialized);
+
+    expect(serialized).toEqual({
+      code: 'NETWORK',
+      message: getAppErrorUserMessage('NETWORK'),
+      retryable: true
     });
+    expect(serializedText).not.toContain('dXNlcjpwYXNz');
+    expect(serializedText).not.toContain('user:pass@');
+    expect(serializedText).not.toContain('provider diagnostics');
   });
 
   it('does not expose raw messages from unknown thrown values', () => {
@@ -43,13 +68,12 @@ describe('application errors', () => {
     });
   });
 
-  it('recognizes and safely reconstructs serialized errors', () => {
-    const payload = {
-      code: 'NETWORK',
-      details: { endpoint: 'https://private.example.test', status: 503 },
-      message: 'Network request failed',
-      retryable: true
-    };
+  it('accepts only per-code public messages and drops diagnostics on deserialization', () => {
+    const payload = serializeAppError(
+      new AppError('NETWORK', 'https://user:pass@provider.example.test', {
+        details: { endpoint: 'https://user:pass@provider.example.test' }
+      })
+    );
 
     expect(isSerializedAppError(payload)).toBe(true);
 
@@ -57,7 +81,31 @@ describe('application errors', () => {
 
     expect(restored).toBeInstanceOf(AppError);
     expect(restored.code).toBe('NETWORK');
-    expect(restored.details).toEqual({ endpoint: '[REDACTED]', status: 503 });
+    expect(restored.message).toBe(getAppErrorUserMessage('NETWORK'));
+    expect(restored.details).toBeUndefined();
+  });
+
+  it('rejects supplied messages and details in a serialized error envelope', () => {
+    const suppliedMessage = {
+      code: 'NETWORK',
+      message: 'Authorization: Basic dXNlcjpwYXNz',
+      retryable: true
+    };
+
+    expect(isSerializedAppError(suppliedMessage)).toBe(false);
+    expect(deserializeAppError(suppliedMessage)).toMatchObject({
+      code: 'UNKNOWN',
+      message: getAppErrorUserMessage('UNKNOWN')
+    });
+
+    expect(
+      isSerializedAppError({
+        code: 'NETWORK',
+        details: { endpoint: 'https://user:pass@provider.example.test' },
+        message: getAppErrorUserMessage('NETWORK'),
+        retryable: true
+      })
+    ).toBe(false);
   });
 
   it('falls back to an unknown error for malformed serialized input', () => {

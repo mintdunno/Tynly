@@ -36,7 +36,8 @@ const SENSITIVE_KEY_PARTS = [
   'endpoint',
   'baseurl',
   'responsepath',
-  'requesttemplate'
+  'requesttemplate',
+  'instruction'
 ] as const;
 
 const SENSITIVE_TEXT_PATTERNS = [

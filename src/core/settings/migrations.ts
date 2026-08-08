@@ -1,6 +1,7 @@
 import { createDefaultAppSettings } from './defaults.ts';
 import {
   CURRENT_SETTINGS_VERSION,
+  MAX_CUSTOM_STYLE_COUNT,
   isAppSettings,
   isBehaviorSettings,
   isBuiltInStyleId,
@@ -14,6 +15,7 @@ import {
   isShortcutSettings,
   isSourceLanguage,
   isStyleSelection,
+  isStylesSettings,
   isTargetLanguage
 } from './schema.ts';
 
@@ -89,6 +91,15 @@ export function migrateAppSettings(raw: unknown): SettingsMigrationResult {
     styles: migrateStylesSettings(source, defaults.styles),
     providers: migrateProviderSettings(source, defaults.providers)
   };
+
+  if (!isAppSettings(settings)) {
+    return {
+      settings: defaults,
+      sourceVersion,
+      migrated: true,
+      recovered: true
+    };
+  }
 
   return {
     settings,
@@ -311,7 +322,7 @@ function migrateStylesSettings(
   defaults: StylesSettings
 ): StylesSettings {
   const nested = asRecord(source.styles);
-  if (nested && isStylesSettingsWithSelection(nested)) {
+  if (isStylesSettings(nested)) {
     return {
       selected: cloneStyleSelection(nested.selected),
       custom: nested.custom.map((style) => ({ ...style }))
@@ -354,6 +365,10 @@ function collectCustomStyles(value: unknown): CustomStyle[] {
   const styleIds = new Set<string>();
   const styles: CustomStyle[] = [];
   for (const style of value) {
+    if (styles.length >= MAX_CUSTOM_STYLE_COUNT) {
+      break;
+    }
+
     if (isCustomStyle(style) && !styleIds.has(style.id)) {
       styleIds.add(style.id);
       styles.push({ ...style });
@@ -471,19 +486,6 @@ function toStyleSelection(value: unknown, custom: CustomStyle[]): StyleSelection
     return { kind: 'custom', id: value };
   }
   return undefined;
-}
-
-function isStylesSettingsWithSelection(value: unknown): value is StylesSettings {
-  const record = asRecord(value);
-  const selected = record?.selected;
-  if (!record || !Array.isArray(record.custom) || !isStyleSelection(selected)) {
-    return false;
-  }
-  const custom = collectCustomStyles(record.custom);
-  return (
-    custom.length === record.custom.length &&
-    (selected.kind !== 'custom' || custom.some((style) => style.id === selected.id))
-  );
 }
 
 function cloneControlsSettings(settings: ControlsSettings): ControlsSettings {

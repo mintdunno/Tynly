@@ -28,6 +28,14 @@ Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 - Custom JSON APIs use data-only templates and safe paths; no eval or arbitrary JavaScript.
 - Browser host access is used only because Tynly must operate in text fields across normal web pages. No background network activity occurs until a user action.
 
+## Settings and message boundary
+
+- Persisted settings are versioned and validated as exact own data fields. Migration reconstructs only recognized values and recovers malformed portions without exposing unknown fields.
+- Settings writes are serialized so concurrent updates cannot overwrite one another.
+- The background produces content settings through an explicit allow-list projection. It includes only the behavior, language, controls, selected style, public custom-style names/IDs, and active-provider summary needed by content UI; it omits custom-style instructions, endpoints, headers, templates, paths, and credentials.
+- Runtime message schemas have bounded, exact request shapes. Transform errors cross the boundary only as a fixed per-code user message and retryability flag, never caller-supplied text or diagnostics.
+- Provider endpoints are HTTPS-only, except loopback HTTP for a local Ollama profile. URLs with credentials, query strings, or fragments are rejected before provider services exist.
+
 ## Initial Manifest permissions
 
 - storage: required for local-only settings and provider configuration.

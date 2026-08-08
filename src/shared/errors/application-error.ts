@@ -1,6 +1,5 @@
 import {
   isSerializableRecord,
-  redactSensitiveText,
   redactSensitiveValue,
   type SerializableRecord
 } from './safe-value.ts';
@@ -25,12 +24,11 @@ export interface AppErrorOptions {
 
 export interface SerializedAppError {
   readonly code: AppErrorCode;
-  readonly details?: SerializableRecord;
   readonly message: string;
   readonly retryable: boolean;
 }
 
-const DEFAULT_ERROR_MESSAGES: Readonly<Record<AppErrorCode, string>> = {
+export const APP_ERROR_USER_MESSAGES: Readonly<Record<AppErrorCode, string>> = {
   AUTHENTICATION: 'Authentication failed. Check this provider profile.',
   CANCELLED: 'The request was cancelled.',
   CONFIGURATION: 'This provider profile needs additional configuration.',
@@ -86,13 +84,13 @@ function readDataProperty(value: Record<string, unknown>, key: string): unknown 
   }
 }
 
-function isErrorMessage(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && value.length <= MAX_ERROR_MESSAGE_LENGTH;
-}
-
-function toSafeMessage(code: AppErrorCode, message: string): string {
-  const redacted = redactSensitiveText(message).trim().slice(0, MAX_ERROR_MESSAGE_LENGTH);
-  return redacted.length > 0 ? redacted : DEFAULT_ERROR_MESSAGES[code];
+function isErrorMessage(value: unknown, code: AppErrorCode): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_ERROR_MESSAGE_LENGTH &&
+    value === getAppErrorUserMessage(code)
+  );
 }
 
 function toSafeDetails(details: unknown): SerializableRecord | undefined {
@@ -108,7 +106,15 @@ export function isAppErrorCode(value: unknown): value is AppErrorCode {
   return typeof value === 'string' && (APP_ERROR_CODES as readonly string[]).includes(value);
 }
 
-/** A typed application failure with a user-safe message and redacted diagnostics. */
+/** Returns the only user-facing message allowed across extension messaging. */
+export function getAppErrorUserMessage(code: AppErrorCode): string {
+  return APP_ERROR_USER_MESSAGES[code];
+}
+
+/**
+ * A typed application failure. Diagnostic details remain internal and are
+ * deliberately excluded from SerializedAppError.
+ */
 export class AppError extends Error {
   readonly code: AppErrorCode;
   readonly details?: SerializableRecord;
@@ -116,10 +122,10 @@ export class AppError extends Error {
 
   constructor(
     code: AppErrorCode,
-    message = DEFAULT_ERROR_MESSAGES[code],
+    _message = APP_ERROR_USER_MESSAGES[code],
     options: AppErrorOptions = {}
   ) {
-    super(toSafeMessage(code, message));
+    super(getAppErrorUserMessage(code));
     this.name = 'AppError';
     this.code = code;
     this.retryable = options.retryable ?? DEFAULT_RETRYABLE[code];
@@ -132,41 +138,30 @@ export class AppError extends Error {
 }
 
 export function isSerializedAppError(value: unknown): value is SerializedAppError {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['code', 'details', 'message', 'retryable'])) {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['code', 'message', 'retryable'])) {
     return false;
   }
 
   const code = readDataProperty(value, 'code');
   const message = readDataProperty(value, 'message');
   const retryable = readDataProperty(value, 'retryable');
-  const details = readDataProperty(value, 'details');
 
-  return (
-    isAppErrorCode(code) &&
-    isErrorMessage(message) &&
-    typeof retryable === 'boolean' &&
-    (details === undefined || isSerializableRecord(details))
-  );
+  return isAppErrorCode(code) && isErrorMessage(message, code) && typeof retryable === 'boolean';
 }
 
 export function normalizeAppError(error: unknown): AppError {
   if (error instanceof AppError) {
     const code = isAppErrorCode(error.code) ? error.code : 'UNKNOWN';
-    const message =
-      typeof error.message === 'string' ? error.message : DEFAULT_ERROR_MESSAGES[code];
     const retryable =
       typeof error.retryable === 'boolean' ? error.retryable : DEFAULT_RETRYABLE[code];
 
     return error.details === undefined
-      ? new AppError(code, message, { retryable })
-      : new AppError(code, message, { details: error.details, retryable });
+      ? new AppError(code, undefined, { retryable })
+      : new AppError(code, undefined, { details: error.details, retryable });
   }
 
   if (isSerializedAppError(error)) {
-    return new AppError(error.code, error.message, {
-      details: error.details,
-      retryable: error.retryable
-    });
+    return new AppError(error.code, undefined, { retryable: error.retryable });
   }
 
   if (isAbortError(error)) {
@@ -179,14 +174,11 @@ export function normalizeAppError(error: unknown): AppError {
 
 export function serializeAppError(error: unknown): SerializedAppError {
   const normalized = normalizeAppError(error);
-  const details = toSafeDetails(normalized.details);
-  const baseError = {
+  return {
     code: normalized.code,
-    message: toSafeMessage(normalized.code, normalized.message),
+    message: getAppErrorUserMessage(normalized.code),
     retryable: normalized.retryable
-  } as const;
-
-  return details === undefined ? baseError : { ...baseError, details };
+  };
 }
 
 export function deserializeAppError(value: unknown): AppError {

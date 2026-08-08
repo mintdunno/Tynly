@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { createDefaultAppSettings } from '../../core/settings/defaults.ts';
+import { toContentSettingsSnapshot } from '../../core/settings/schema.ts';
 import { serializeAppError } from '../errors/index.ts';
 import {
   isRequestMessage,
@@ -46,14 +48,11 @@ describe('extension message contracts', () => {
     ).toBe(false);
   });
 
-  it('validates public settings responses without importing a settings schema', () => {
+  it('validates only exact public settings responses', () => {
+    const settings = toContentSettingsSnapshot(createDefaultAppSettings());
     const response = {
       requestId: 'settings:1',
-      settings: {
-        behavior: { mode: 'replace', showUndo: true },
-        controls: { fieldButton: { enabled: true } },
-        language: { source: 'vi', target: 'en' }
-      },
+      settings,
       type: MESSAGE_TYPES.contentSettings
     };
 
@@ -63,7 +62,39 @@ describe('extension message contracts', () => {
     expect(
       isResponseMessage({
         requestId: 'settings:1',
-        settings: { provider: { apiKey: 'sk-1234567890' } },
+        settings: { ...settings, provider: { apiKey: 'sk-1234567890' } },
+        type: MESSAGE_TYPES.contentSettings
+      })
+    ).toBe(false);
+
+    const privateSettings = createDefaultAppSettings();
+    privateSettings.styles = {
+      selected: { kind: 'custom', id: 'private-style' },
+      custom: [
+        {
+          id: 'private-style',
+          name: 'Private style',
+          instruction: 'Keep this private.'
+        }
+      ]
+    };
+    const publicSettings = toContentSettingsSnapshot(privateSettings);
+
+    expect(
+      isResponseMessage({
+        requestId: 'settings:1',
+        settings: {
+          ...publicSettings,
+          styles: {
+            ...publicSettings.styles,
+            custom: [
+              {
+                ...publicSettings.styles.custom[0]!,
+                instruction: 'Keep this private.'
+              }
+            ]
+          }
+        },
         type: MESSAGE_TYPES.contentSettings
       })
     ).toBe(false);
@@ -83,6 +114,20 @@ describe('extension message contracts', () => {
     expect(
       isResponseMessage({
         error: { message: 'raw exception' },
+        operationId: 'operation:1',
+        requestId: 'request:1',
+        type: MESSAGE_TYPES.transformError
+      })
+    ).toBe(false);
+
+    expect(
+      isResponseMessage({
+        error: {
+          code: 'NETWORK',
+          details: { authorization: 'Basic dXNlcjpwYXNz' },
+          message: 'Authorization: Basic dXNlcjpwYXNz',
+          retryable: true
+        },
         operationId: 'operation:1',
         requestId: 'request:1',
         type: MESSAGE_TYPES.transformError

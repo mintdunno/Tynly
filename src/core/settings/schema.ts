@@ -206,12 +206,23 @@ export interface ContentProviderSummary {
   configured: boolean;
 }
 
+/** A public style intentionally excludes its private prompt instruction. */
+export interface ContentCustomStyleSummary {
+  id: string;
+  name: string;
+}
+
+export interface ContentStylesSettings {
+  selected: StyleSelection;
+  custom: ContentCustomStyleSummary[];
+}
+
 export interface ContentSettingsSnapshot {
   version: SettingsVersion;
   language: LanguageSettings;
   behavior: BehaviorSettings;
   controls: ControlsSettings;
-  styles: StylesSettings;
+  styles: ContentStylesSettings;
   activeProvider: ContentProviderSummary | null;
 }
 
@@ -229,7 +240,7 @@ const MAX_MODEL_ID_LENGTH = 256;
 const MAX_SECRET_LENGTH = 16_384;
 const MAX_HEADER_COUNT = 32;
 const MAX_HEADER_VALUE_LENGTH = 8_192;
-const MAX_CUSTOM_STYLE_COUNT = 30;
+export const MAX_CUSTOM_STYLE_COUNT = 30;
 const MAX_CUSTOM_STYLE_NAME_LENGTH = 80;
 const MAX_CUSTOM_STYLE_INSTRUCTION_LENGTH = 500;
 const MAX_ENDPOINT_LENGTH = 2_048;
@@ -241,6 +252,87 @@ const MAX_OUTPUT_TOKENS = 16_384;
 
 const profileIdPattern = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
 const headerNamePattern = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+
+const APP_SETTINGS_FIELDS = [
+  'version',
+  'language',
+  'behavior',
+  'controls',
+  'styles',
+  'providers'
+] as const;
+const LANGUAGE_SETTINGS_FIELDS = ['source', 'target'] as const;
+const BEHAVIOR_SETTINGS_FIELDS = ['afterTransform', 'showUndoNotification'] as const;
+const KEYBOARD_SHORTCUT_FIELDS = ['code', 'alt', 'ctrl', 'meta', 'shift'] as const;
+const SHORTCUT_SETTINGS_FIELDS = ['enabled', 'shortcut'] as const;
+const FIELD_BUTTON_SETTINGS_FIELDS = [
+  'enabled',
+  'position',
+  'appearance',
+  'clickBehavior'
+] as const;
+const SELECTION_SETTINGS_FIELDS = ['enabled', 'editableBehavior', 'pageBehavior'] as const;
+const CONTROLS_SETTINGS_FIELDS = ['shortcut', 'fieldButton', 'selection'] as const;
+const CUSTOM_STYLE_FIELDS = ['id', 'name', 'instruction'] as const;
+const CONTENT_CUSTOM_STYLE_FIELDS = ['id', 'name'] as const;
+const STYLE_SELECTION_FIELDS = ['kind', 'id'] as const;
+const STYLES_SETTINGS_FIELDS = ['selected', 'custom'] as const;
+const PROVIDER_HEADER_FIELDS = ['name', 'value'] as const;
+const PROVIDER_SETTINGS_FIELDS = ['activeProfileId', 'profiles'] as const;
+const CONTENT_PROVIDER_SUMMARY_FIELDS = [
+  'id',
+  'name',
+  'kind',
+  'selectedModelId',
+  'configured'
+] as const;
+const CONTENT_SETTINGS_SNAPSHOT_FIELDS = [
+  'version',
+  'language',
+  'behavior',
+  'controls',
+  'styles',
+  'activeProvider'
+] as const;
+const OPENAI_PROFILE_FIELDS = [
+  'id',
+  'name',
+  'kind',
+  'selectedModelId',
+  'timeoutMs',
+  'temperature',
+  'maxOutputTokens',
+  'baseUrl',
+  'apiKey'
+] as const;
+const OPENAI_COMPATIBLE_PROFILE_FIELDS = [...OPENAI_PROFILE_FIELDS, 'headers'] as const;
+const OLLAMA_PROFILE_FIELDS = [
+  'id',
+  'name',
+  'kind',
+  'selectedModelId',
+  'timeoutMs',
+  'temperature',
+  'maxOutputTokens',
+  'baseUrl',
+  'headers'
+] as const;
+const CUSTOM_JSON_PROFILE_FIELDS = [
+  'id',
+  'name',
+  'kind',
+  'selectedModelId',
+  'timeoutMs',
+  'temperature',
+  'maxOutputTokens',
+  'endpoint',
+  'method',
+  'authentication',
+  'headers',
+  'modelsEndpoint',
+  'requestTemplate',
+  'responseTextPath'
+] as const;
 
 export function isLanguageCode(value: unknown): value is LanguageCode {
   return isOneOf(value, SUPPORTED_LANGUAGE_CODES);
@@ -263,29 +355,56 @@ export function isProviderKind(value: unknown): value is ProviderKind {
 }
 
 export function isProviderProfile(value: unknown): value is ProviderProfile {
-  if (!isRecord(value) || !isProviderProfileBase(value)) {
+  if (!isRecord(value)) {
     return false;
   }
 
-  switch (value.kind) {
+  const kind = getOwnDataValue(value, 'kind');
+  switch (kind) {
     case 'openai':
     case 'anthropic':
-    case 'gemini':
-      return isHttpUrl(value.baseUrl) && isSecret(value.apiKey);
-    case 'openai-compatible':
-      return isHttpUrl(value.baseUrl) && isSecret(value.apiKey) && isProviderHeaders(value.headers);
-    case 'ollama':
-      return isHttpUrl(value.baseUrl) && isProviderHeaders(value.headers);
-    case 'custom-json':
+    case 'gemini': {
       return (
-        isHttpUrl(value.endpoint) &&
-        isOneOf(value.method, HTTP_METHODS) &&
-        isCustomApiAuthentication(value.authentication) &&
-        isProviderHeaders(value.headers) &&
-        (value.modelsEndpoint === null || isHttpUrl(value.modelsEndpoint)) &&
-        isBoundedText(value.requestTemplate, MAX_TEMPLATE_LENGTH) &&
-        isNonBlankSingleLineText(value.responseTextPath, MAX_RESPONSE_PATH_LENGTH)
+        hasExactOwnDataFields(value, OPENAI_PROFILE_FIELDS) &&
+        isProviderProfileBase(value) &&
+        isHttpUrl(getOwnDataValue(value, 'baseUrl')) &&
+        isSecret(getOwnDataValue(value, 'apiKey'))
       );
+    }
+    case 'openai-compatible': {
+      return (
+        hasExactOwnDataFields(value, OPENAI_COMPATIBLE_PROFILE_FIELDS) &&
+        isProviderProfileBase(value) &&
+        isHttpUrl(getOwnDataValue(value, 'baseUrl')) &&
+        isSecret(getOwnDataValue(value, 'apiKey')) &&
+        isProviderHeaders(getOwnDataValue(value, 'headers'))
+      );
+    }
+    case 'ollama': {
+      return (
+        hasExactOwnDataFields(value, OLLAMA_PROFILE_FIELDS) &&
+        isProviderProfileBase(value) &&
+        isOllamaUrl(getOwnDataValue(value, 'baseUrl')) &&
+        isProviderHeaders(getOwnDataValue(value, 'headers'))
+      );
+    }
+    case 'custom-json': {
+      return (
+        hasExactOwnDataFields(value, CUSTOM_JSON_PROFILE_FIELDS) &&
+        isProviderProfileBase(value) &&
+        isHttpUrl(getOwnDataValue(value, 'endpoint')) &&
+        isOneOf(getOwnDataValue(value, 'method'), HTTP_METHODS) &&
+        isCustomApiAuthentication(getOwnDataValue(value, 'authentication')) &&
+        isProviderHeaders(getOwnDataValue(value, 'headers')) &&
+        (getOwnDataValue(value, 'modelsEndpoint') === null ||
+          isHttpUrl(getOwnDataValue(value, 'modelsEndpoint'))) &&
+        isBoundedText(getOwnDataValue(value, 'requestTemplate'), MAX_TEMPLATE_LENGTH) &&
+        isNonBlankSingleLineText(
+          getOwnDataValue(value, 'responseTextPath'),
+          MAX_RESPONSE_PATH_LENGTH
+        )
+      );
+    }
     default:
       return false;
   }
@@ -298,29 +417,29 @@ export function isAppSettings(value: unknown): value is AppSettings {
 export function validateAppSettings(value: unknown): SettingsValidationResult {
   const issues: SettingsValidationIssue[] = [];
 
-  if (!isRecord(value)) {
-    return invalid('settings', 'must be an object');
+  if (!isRecord(value) || !hasExactOwnDataFields(value, APP_SETTINGS_FIELDS)) {
+    return invalid('settings', 'must contain exactly the current settings fields');
   }
 
-  if (value.version !== CURRENT_SETTINGS_VERSION) {
+  if (getOwnDataValue(value, 'version') !== CURRENT_SETTINGS_VERSION) {
     issues.push({
       path: 'version',
       message: `must be settings version ${CURRENT_SETTINGS_VERSION}`
     });
   }
-  if (!isLanguageSettings(value.language)) {
+  if (!isLanguageSettings(getOwnDataValue(value, 'language'))) {
     issues.push({ path: 'language', message: 'must contain valid source and target languages' });
   }
-  if (!isBehaviorSettings(value.behavior)) {
+  if (!isBehaviorSettings(getOwnDataValue(value, 'behavior'))) {
     issues.push({ path: 'behavior', message: 'must contain valid transform behavior' });
   }
-  if (!isControlsSettings(value.controls)) {
+  if (!isControlsSettings(getOwnDataValue(value, 'controls'))) {
     issues.push({ path: 'controls', message: 'must contain valid controls' });
   }
-  if (!isStylesSettings(value.styles)) {
+  if (!isStylesSettings(getOwnDataValue(value, 'styles'))) {
     issues.push({ path: 'styles', message: 'must contain valid style settings' });
   }
-  if (!isProviderSettings(value.providers)) {
+  if (!isProviderSettings(getOwnDataValue(value, 'providers'))) {
     issues.push({ path: 'providers', message: 'must contain valid provider settings' });
   }
 
@@ -338,98 +457,193 @@ export function toContentSettingsSnapshot(settings: AppSettings): ContentSetting
 
   return {
     version: settings.version,
-    language: { ...settings.language },
-    behavior: { ...settings.behavior },
+    language: {
+      source: settings.language.source,
+      target: settings.language.target
+    },
+    behavior: {
+      afterTransform: settings.behavior.afterTransform,
+      showUndoNotification: settings.behavior.showUndoNotification
+    },
     controls: {
       shortcut: {
         enabled: settings.controls.shortcut.enabled,
-        shortcut: { ...settings.controls.shortcut.shortcut }
+        shortcut: {
+          code: settings.controls.shortcut.shortcut.code,
+          alt: settings.controls.shortcut.shortcut.alt,
+          ctrl: settings.controls.shortcut.shortcut.ctrl,
+          meta: settings.controls.shortcut.shortcut.meta,
+          shift: settings.controls.shortcut.shortcut.shift
+        }
       },
-      fieldButton: { ...settings.controls.fieldButton },
-      selection: { ...settings.controls.selection }
+      fieldButton: {
+        enabled: settings.controls.fieldButton.enabled,
+        position: settings.controls.fieldButton.position,
+        appearance: settings.controls.fieldButton.appearance,
+        clickBehavior: settings.controls.fieldButton.clickBehavior
+      },
+      selection: {
+        enabled: settings.controls.selection.enabled,
+        editableBehavior: settings.controls.selection.editableBehavior,
+        pageBehavior: settings.controls.selection.pageBehavior
+      }
     },
     styles: {
-      selected: { ...settings.styles.selected },
-      custom: settings.styles.custom.map((style) => ({ ...style }))
+      selected:
+        settings.styles.selected.kind === 'built-in'
+          ? { kind: 'built-in', id: settings.styles.selected.id }
+          : { kind: 'custom', id: settings.styles.selected.id },
+      custom: settings.styles.custom.map((style) => ({ id: style.id, name: style.name }))
     },
     activeProvider: activeProfile ? toContentProviderSummary(activeProfile) : null
   };
 }
 
 export function isContentSettingsSnapshot(value: unknown): value is ContentSettingsSnapshot {
-  if (!isRecord(value)) {
+  if (!isRecord(value) || !hasExactOwnDataFields(value, CONTENT_SETTINGS_SNAPSHOT_FIELDS)) {
     return false;
   }
 
   return (
-    value.version === CURRENT_SETTINGS_VERSION &&
-    isLanguageSettings(value.language) &&
-    isBehaviorSettings(value.behavior) &&
-    isControlsSettings(value.controls) &&
-    isStylesSettings(value.styles) &&
-    (value.activeProvider === null || isContentProviderSummary(value.activeProvider))
+    getOwnDataValue(value, 'version') === CURRENT_SETTINGS_VERSION &&
+    isLanguageSettings(getOwnDataValue(value, 'language')) &&
+    isBehaviorSettings(getOwnDataValue(value, 'behavior')) &&
+    isControlsSettings(getOwnDataValue(value, 'controls')) &&
+    isContentStylesSettings(getOwnDataValue(value, 'styles')) &&
+    (getOwnDataValue(value, 'activeProvider') === null ||
+      isContentProviderSummary(getOwnDataValue(value, 'activeProvider')))
   );
 }
 
 export function isContentProviderSummary(value: unknown): value is ContentProviderSummary {
   return (
     isRecord(value) &&
-    isProfileId(value.id) &&
-    isNonBlankText(value.name, MAX_PROFILE_NAME_LENGTH) &&
-    isProviderKind(value.kind) &&
-    isBoundedText(value.selectedModelId, MAX_MODEL_ID_LENGTH) &&
-    typeof value.configured === 'boolean'
+    hasExactOwnDataFields(value, CONTENT_PROVIDER_SUMMARY_FIELDS) &&
+    isProfileId(getOwnDataValue(value, 'id')) &&
+    isNonBlankText(getOwnDataValue(value, 'name'), MAX_PROFILE_NAME_LENGTH) &&
+    isProviderKind(getOwnDataValue(value, 'kind')) &&
+    isBoundedText(getOwnDataValue(value, 'selectedModelId'), MAX_MODEL_ID_LENGTH) &&
+    typeof getOwnDataValue(value, 'configured') === 'boolean'
   );
 }
 
 export function isLanguageSettings(value: unknown): value is LanguageSettings {
-  return isRecord(value) && isSourceLanguage(value.source) && isTargetLanguage(value.target);
+  return (
+    isRecord(value) &&
+    hasExactOwnDataFields(value, LANGUAGE_SETTINGS_FIELDS) &&
+    isSourceLanguage(getOwnDataValue(value, 'source')) &&
+    isTargetLanguage(getOwnDataValue(value, 'target'))
+  );
 }
 
 export function isBehaviorSettings(value: unknown): value is BehaviorSettings {
   return (
     isRecord(value) &&
-    (value.afterTransform === 'replace' || value.afterTransform === 'preview') &&
-    typeof value.showUndoNotification === 'boolean'
+    hasExactOwnDataFields(value, BEHAVIOR_SETTINGS_FIELDS) &&
+    (getOwnDataValue(value, 'afterTransform') === 'replace' ||
+      getOwnDataValue(value, 'afterTransform') === 'preview') &&
+    typeof getOwnDataValue(value, 'showUndoNotification') === 'boolean'
   );
 }
 
 export function isControlsSettings(value: unknown): value is ControlsSettings {
   return (
     isRecord(value) &&
-    isShortcutSettings(value.shortcut) &&
-    isFieldButtonSettings(value.fieldButton) &&
-    isSelectionSettings(value.selection)
+    hasExactOwnDataFields(value, CONTROLS_SETTINGS_FIELDS) &&
+    isShortcutSettings(getOwnDataValue(value, 'shortcut')) &&
+    isFieldButtonSettings(getOwnDataValue(value, 'fieldButton')) &&
+    isSelectionSettings(getOwnDataValue(value, 'selection'))
   );
 }
 
 export function isStylesSettings(value: unknown): value is StylesSettings {
-  if (!isRecord(value) || !Array.isArray(value.custom) || !isStyleSelection(value.selected)) {
+  if (
+    !isRecord(value) ||
+    !hasExactOwnDataFields(value, STYLES_SETTINGS_FIELDS) ||
+    !Array.isArray(getOwnDataValue(value, 'custom')) ||
+    !isStyleSelection(getOwnDataValue(value, 'selected'))
+  ) {
     return false;
   }
 
-  if (value.custom.length > MAX_CUSTOM_STYLE_COUNT) {
+  const custom = getOwnDataValue(value, 'custom');
+  const selected = getOwnDataValue(value, 'selected');
+  if (
+    !Array.isArray(custom) ||
+    !isStyleSelection(selected) ||
+    custom.length > MAX_CUSTOM_STYLE_COUNT
+  ) {
     return false;
   }
 
   const styleIds = new Set<string>();
-  for (const style of value.custom) {
+  for (const style of custom) {
     if (!isCustomStyle(style) || styleIds.has(style.id)) {
       return false;
     }
     styleIds.add(style.id);
   }
 
-  return value.selected.kind !== 'custom' || styleIds.has(value.selected.id);
+  return selected.kind !== 'custom' || styleIds.has(selected.id);
+}
+
+export function isContentStylesSettings(value: unknown): value is ContentStylesSettings {
+  if (
+    !isRecord(value) ||
+    !hasExactOwnDataFields(value, STYLES_SETTINGS_FIELDS) ||
+    !Array.isArray(getOwnDataValue(value, 'custom')) ||
+    !isStyleSelection(getOwnDataValue(value, 'selected'))
+  ) {
+    return false;
+  }
+
+  const custom = getOwnDataValue(value, 'custom');
+  const selected = getOwnDataValue(value, 'selected');
+  if (
+    !Array.isArray(custom) ||
+    !isStyleSelection(selected) ||
+    custom.length > MAX_CUSTOM_STYLE_COUNT
+  ) {
+    return false;
+  }
+
+  const styleIds = new Set<string>();
+  for (const style of custom) {
+    if (!isContentCustomStyleSummary(style) || styleIds.has(style.id)) {
+      return false;
+    }
+    styleIds.add(style.id);
+  }
+
+  return selected.kind !== 'custom' || styleIds.has(selected.id);
+}
+
+export function isContentCustomStyleSummary(value: unknown): value is ContentCustomStyleSummary {
+  return (
+    isRecord(value) &&
+    hasExactOwnDataFields(value, CONTENT_CUSTOM_STYLE_FIELDS) &&
+    isProfileId(getOwnDataValue(value, 'id')) &&
+    isNonBlankText(getOwnDataValue(value, 'name'), MAX_CUSTOM_STYLE_NAME_LENGTH)
+  );
 }
 
 export function isProviderSettings(value: unknown): value is ProviderSettings {
-  if (!isRecord(value) || !Array.isArray(value.profiles)) {
+  if (
+    !isRecord(value) ||
+    !hasExactOwnDataFields(value, PROVIDER_SETTINGS_FIELDS) ||
+    !Array.isArray(getOwnDataValue(value, 'profiles'))
+  ) {
+    return false;
+  }
+
+  const profiles = getOwnDataValue(value, 'profiles');
+  const activeProfileId = getOwnDataValue(value, 'activeProfileId');
+  if (!Array.isArray(profiles)) {
     return false;
   }
 
   const profileIds = new Set<string>();
-  for (const profile of value.profiles) {
+  for (const profile of profiles) {
     if (!isProviderProfile(profile) || profileIds.has(profile.id)) {
       return false;
     }
@@ -437,64 +651,78 @@ export function isProviderSettings(value: unknown): value is ProviderSettings {
   }
 
   return (
-    value.activeProfileId === null ||
-    (isProfileId(value.activeProfileId) && profileIds.has(value.activeProfileId))
+    activeProfileId === null || (isProfileId(activeProfileId) && profileIds.has(activeProfileId))
   );
 }
 
 export function isCustomStyle(value: unknown): value is CustomStyle {
   return (
     isRecord(value) &&
-    isProfileId(value.id) &&
-    isNonBlankText(value.name, MAX_CUSTOM_STYLE_NAME_LENGTH) &&
-    isNonBlankText(value.instruction, MAX_CUSTOM_STYLE_INSTRUCTION_LENGTH)
+    hasExactOwnDataFields(value, CUSTOM_STYLE_FIELDS) &&
+    isProfileId(getOwnDataValue(value, 'id')) &&
+    isNonBlankText(getOwnDataValue(value, 'name'), MAX_CUSTOM_STYLE_NAME_LENGTH) &&
+    isNonBlankText(getOwnDataValue(value, 'instruction'), MAX_CUSTOM_STYLE_INSTRUCTION_LENGTH)
   );
 }
 
 export function isStyleSelection(value: unknown): value is StyleSelection {
-  if (!isRecord(value) || !isNonBlankText(value.id, MAX_PROFILE_ID_LENGTH)) {
+  if (
+    !isRecord(value) ||
+    !hasExactOwnDataFields(value, STYLE_SELECTION_FIELDS) ||
+    !isNonBlankText(getOwnDataValue(value, 'id'), MAX_PROFILE_ID_LENGTH)
+  ) {
     return false;
   }
 
   return (
-    (value.kind === 'built-in' && isBuiltInStyleId(value.id)) ||
-    (value.kind === 'custom' && isProfileId(value.id))
+    (getOwnDataValue(value, 'kind') === 'built-in' &&
+      isBuiltInStyleId(getOwnDataValue(value, 'id'))) ||
+    (getOwnDataValue(value, 'kind') === 'custom' && isProfileId(getOwnDataValue(value, 'id')))
   );
 }
 
 export function isShortcutSettings(value: unknown): value is ShortcutSettings {
   return (
-    isRecord(value) && typeof value.enabled === 'boolean' && isKeyboardShortcut(value.shortcut)
+    isRecord(value) &&
+    hasExactOwnDataFields(value, SHORTCUT_SETTINGS_FIELDS) &&
+    typeof getOwnDataValue(value, 'enabled') === 'boolean' &&
+    isKeyboardShortcut(getOwnDataValue(value, 'shortcut'))
   );
 }
 
 export function isKeyboardShortcut(value: unknown): value is KeyboardShortcut {
   return (
     isRecord(value) &&
-    isNonBlankSingleLineText(value.code, 64) &&
-    typeof value.alt === 'boolean' &&
-    typeof value.ctrl === 'boolean' &&
-    typeof value.meta === 'boolean' &&
-    typeof value.shift === 'boolean'
+    hasExactOwnDataFields(value, KEYBOARD_SHORTCUT_FIELDS) &&
+    isNonBlankSingleLineText(getOwnDataValue(value, 'code'), 64) &&
+    typeof getOwnDataValue(value, 'alt') === 'boolean' &&
+    typeof getOwnDataValue(value, 'ctrl') === 'boolean' &&
+    typeof getOwnDataValue(value, 'meta') === 'boolean' &&
+    typeof getOwnDataValue(value, 'shift') === 'boolean'
   );
 }
 
 export function isFieldButtonSettings(value: unknown): value is FieldButtonSettings {
   return (
     isRecord(value) &&
-    typeof value.enabled === 'boolean' &&
-    isOneOf(value.position, FIELD_BUTTON_POSITIONS) &&
-    (value.appearance === 'tynly-icon' || value.appearance === 'monochrome-icon') &&
-    (value.clickBehavior === 'transform-immediately' || value.clickBehavior === 'show-preview')
+    hasExactOwnDataFields(value, FIELD_BUTTON_SETTINGS_FIELDS) &&
+    typeof getOwnDataValue(value, 'enabled') === 'boolean' &&
+    isOneOf(getOwnDataValue(value, 'position'), FIELD_BUTTON_POSITIONS) &&
+    (getOwnDataValue(value, 'appearance') === 'tynly-icon' ||
+      getOwnDataValue(value, 'appearance') === 'monochrome-icon') &&
+    (getOwnDataValue(value, 'clickBehavior') === 'transform-immediately' ||
+      getOwnDataValue(value, 'clickBehavior') === 'show-preview')
   );
 }
 
 export function isSelectionSettings(value: unknown): value is SelectionSettings {
   return (
     isRecord(value) &&
-    typeof value.enabled === 'boolean' &&
-    (value.editableBehavior === 'replace' || value.editableBehavior === 'preview') &&
-    value.pageBehavior === 'show-result'
+    hasExactOwnDataFields(value, SELECTION_SETTINGS_FIELDS) &&
+    typeof getOwnDataValue(value, 'enabled') === 'boolean' &&
+    (getOwnDataValue(value, 'editableBehavior') === 'replace' ||
+      getOwnDataValue(value, 'editableBehavior') === 'preview') &&
+    getOwnDataValue(value, 'pageBehavior') === 'show-result'
   );
 }
 
@@ -503,13 +731,19 @@ export function isCustomApiAuthentication(value: unknown): value is CustomApiAut
     return false;
   }
 
-  switch (value.kind) {
+  switch (getOwnDataValue(value, 'kind')) {
     case 'none':
-      return true;
+      return hasExactOwnDataFields(value, ['kind']);
     case 'bearer':
-      return isSecret(value.token);
+      return (
+        hasExactOwnDataFields(value, ['kind', 'token']) && isSecret(getOwnDataValue(value, 'token'))
+      );
     case 'header':
-      return isHeaderName(value.headerName) && isSecret(value.value);
+      return (
+        hasExactOwnDataFields(value, ['kind', 'headerName', 'value']) &&
+        isHeaderName(getOwnDataValue(value, 'headerName')) &&
+        isSecret(getOwnDataValue(value, 'value'))
+      );
     default:
       return false;
   }
@@ -522,8 +756,9 @@ export function isProviderHeaders(value: unknown): value is ProviderHeader[] {
     value.every(
       (header) =>
         isRecord(header) &&
-        isHeaderName(header.name) &&
-        isSingleLineText(header.value, MAX_HEADER_VALUE_LENGTH)
+        hasExactOwnDataFields(header, PROVIDER_HEADER_FIELDS) &&
+        isHeaderName(getOwnDataValue(header, 'name')) &&
+        isSingleLineText(getOwnDataValue(header, 'value'), MAX_HEADER_VALUE_LENGTH)
     )
   );
 }
@@ -535,21 +770,6 @@ export function isProfileId(value: unknown): value is string {
     value.length <= MAX_PROFILE_ID_LENGTH &&
     profileIdPattern.test(value)
   );
-}
-
-export function isHttpUrl(value: unknown): value is string {
-  if (!isNonBlankSingleLineText(value, MAX_ENDPOINT_LENGTH)) {
-    return false;
-  }
-
-  try {
-    const url = new URL(value);
-    return (
-      (url.protocol === 'https:' || url.protocol === 'http:') && !url.username && !url.password
-    );
-  } catch {
-    return false;
-  }
 }
 
 function toContentProviderSummary(profile: ProviderProfile): ContentProviderSummary {
@@ -585,16 +805,91 @@ function isProfileConfigured(profile: ProviderProfile): boolean {
   }
 }
 
+export function isHttpUrl(value: unknown): value is string {
+  const url = toSafeProviderUrl(value);
+  return url !== null && url.protocol === 'https:';
+}
+
+/** Ollama may use HTTP only when its endpoint is local to the browser machine. */
+export function isOllamaUrl(value: unknown): value is string {
+  const url = toSafeProviderUrl(value);
+  return url !== null && (url.protocol === 'https:' || isLoopbackHost(url.hostname));
+}
+
+function toSafeProviderUrl(value: unknown): URL | null {
+  if (!isNonBlankSingleLineText(value, MAX_ENDPOINT_LENGTH)) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    if (
+      (url.protocol !== 'https:' && url.protocol !== 'http:') ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      url.search
+    ) {
+      return null;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' || hostname === '[::1]' || /^127(?:\.\d{1,3}){3}$/u.test(hostname)
+  );
+}
+
+function hasExactOwnDataFields(
+  value: Record<string, unknown>,
+  expectedFields: readonly string[]
+): boolean {
+  try {
+    const ownKeys = Reflect.ownKeys(value);
+    if (
+      ownKeys.length !== expectedFields.length ||
+      !ownKeys.every((key) => typeof key === 'string' && expectedFields.includes(key))
+    ) {
+      return false;
+    }
+
+    return expectedFields.every((field) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, field);
+      return (
+        descriptor !== undefined && descriptor.enumerable && Object.hasOwn(descriptor, 'value')
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+function getOwnDataValue(value: Record<string, unknown>, field: string): unknown {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, field);
+    return descriptor !== undefined && Object.hasOwn(descriptor, 'value')
+      ? descriptor.value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function isProviderProfileBase(value: Record<string, unknown>): boolean {
   return (
-    isProfileId(value.id) &&
-    isNonBlankText(value.name, MAX_PROFILE_NAME_LENGTH) &&
-    isProviderKind(value.kind) &&
-    isBoundedText(value.selectedModelId, MAX_MODEL_ID_LENGTH) &&
-    isFiniteIntegerInRange(value.timeoutMs, MIN_TIMEOUT_MS, MAX_TIMEOUT_MS) &&
-    (value.temperature === null || isFiniteNumberInRange(value.temperature, 0, 2)) &&
-    (value.maxOutputTokens === null ||
-      isFiniteIntegerInRange(value.maxOutputTokens, 1, MAX_OUTPUT_TOKENS))
+    isProfileId(getOwnDataValue(value, 'id')) &&
+    isNonBlankText(getOwnDataValue(value, 'name'), MAX_PROFILE_NAME_LENGTH) &&
+    isProviderKind(getOwnDataValue(value, 'kind')) &&
+    isBoundedText(getOwnDataValue(value, 'selectedModelId'), MAX_MODEL_ID_LENGTH) &&
+    isFiniteIntegerInRange(getOwnDataValue(value, 'timeoutMs'), MIN_TIMEOUT_MS, MAX_TIMEOUT_MS) &&
+    (getOwnDataValue(value, 'temperature') === null ||
+      isFiniteNumberInRange(getOwnDataValue(value, 'temperature'), 0, 2)) &&
+    (getOwnDataValue(value, 'maxOutputTokens') === null ||
+      isFiniteIntegerInRange(getOwnDataValue(value, 'maxOutputTokens'), 1, MAX_OUTPUT_TOKENS))
   );
 }
 
@@ -636,7 +931,16 @@ function isFiniteIntegerInRange(value: unknown, min: number, max: number): value
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
 }
 
 function isOneOf<const T extends readonly string[]>(

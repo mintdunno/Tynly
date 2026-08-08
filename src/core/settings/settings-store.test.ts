@@ -84,4 +84,35 @@ describe('SettingsStore', () => {
     });
     expect(storage.values.has(SETTINGS_STORAGE_KEY)).toBe(false);
   });
+
+  it('restricts storage access before a direct replacement', async () => {
+    const storage = new MemoryStorage();
+    const store = new SettingsStore(storage);
+
+    await store.replace(createDefaultAppSettings());
+
+    expect(storage.restricted).toBe(true);
+    expect(storage.values.get(SETTINGS_STORAGE_KEY)).toMatchObject({ version: 1 });
+  });
+
+  it('serializes concurrent updates so one change cannot overwrite another', async () => {
+    const storage = new MemoryStorage();
+    const store = new SettingsStore(storage);
+
+    await Promise.all([
+      store.update((settings) => ({
+        ...settings,
+        language: { ...settings.language, source: 'en' }
+      })),
+      store.update((settings) => ({
+        ...settings,
+        behavior: { ...settings.behavior, afterTransform: 'preview' }
+      }))
+    ]);
+
+    await expect(store.get()).resolves.toMatchObject({
+      language: { source: 'en', target: 'en' },
+      behavior: { afterTransform: 'preview' }
+    });
+  });
 });

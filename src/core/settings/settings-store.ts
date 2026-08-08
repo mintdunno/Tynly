@@ -20,15 +20,28 @@ export type SettingsUpdater = (current: AppSettings) => AppSettings;
  * accessing Chrome storage themselves.
  */
 export class SettingsStore {
+  private cachedSettings: AppSettings | null = null;
   private initialization: Promise<AppSettings> | null = null;
+  private writeQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly storage: ExtensionLocalStorage = createChromeLocalStorage()) {}
 
   async initialize(): Promise<AppSettings> {
+    if (this.cachedSettings !== null) {
+      return cloneSettings(this.cachedSettings);
+    }
+
     if (this.initialization === null) {
-      this.initialization = this.initializeInternal().finally(() => {
-        this.initialization = null;
-      });
+      this.initialization = this.initializeInternal().then(
+        (settings) => {
+          this.cachedSettings = cloneSettings(settings);
+          return settings;
+        },
+        (error: unknown) => {
+          this.initialization = null;
+          throw error;
+        }
+      );
     }
 
     return cloneSettings(await this.initialization);
@@ -42,7 +55,22 @@ export class SettingsStore {
     return toContentSettingsSnapshot(await this.get());
   }
 
-  async replace(next: AppSettings): Promise<AppSettings> {
+  replace(next: AppSettings): Promise<AppSettings> {
+    return this.enqueueWrite(async () => {
+      const safeNext = this.validateNext(next);
+      await this.initialize();
+      return this.persist(safeNext);
+    });
+  }
+
+  update(updater: SettingsUpdater): Promise<AppSettings> {
+    return this.enqueueWrite(async () => {
+      const current = await this.get();
+      return this.persist(this.validateNext(updater(cloneSettings(current))));
+    });
+  }
+
+  private validateNext(next: AppSettings): AppSettings {
     const validated = validateAppSettings(next);
 
     if (!validated.ok) {
@@ -54,14 +82,22 @@ export class SettingsStore {
       });
     }
 
-    const safeNext = cloneSettings(validated.value);
-    await this.write(safeNext);
-    return cloneSettings(safeNext);
+    return cloneSettings(validated.value);
   }
 
-  async update(updater: SettingsUpdater): Promise<AppSettings> {
-    const current = await this.get();
-    return this.replace(updater(cloneSettings(current)));
+  private async persist(settings: AppSettings): Promise<AppSettings> {
+    await this.write(settings);
+    this.cachedSettings = cloneSettings(settings);
+    return cloneSettings(settings);
+  }
+
+  private enqueueWrite<T>(work: () => Promise<T>): Promise<T> {
+    const result = this.writeQueue.then(work, work);
+    this.writeQueue = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
   }
 
   private async initializeInternal(): Promise<AppSettings> {

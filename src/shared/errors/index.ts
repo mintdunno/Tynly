@@ -1,7 +1,9 @@
 export {
   APP_ERROR_CODES,
+  APP_ERROR_USER_MESSAGES,
   AppError,
   deserializeAppError,
+  getAppErrorUserMessage,
   isAppErrorCode,
   isSerializedAppError,
   normalizeAppError,

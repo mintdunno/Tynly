@@ -1,8 +1,8 @@
 import {
-  isPublicSettingsPayload,
-  isSerializedAppError,
-  type SerializedAppError
-} from '../errors/index.ts';
+  isContentSettingsSnapshot,
+  type ContentSettingsSnapshot
+} from '../../core/settings/schema.ts';
+import { isSerializedAppError, type SerializedAppError } from '../errors/index.ts';
 
 export const MESSAGE_TYPES = {
   cancelTransform: 'tynly.transform.cancel',
@@ -51,13 +51,10 @@ export interface TransformErrorResponse {
   readonly type: typeof MESSAGE_TYPES.transformError;
 }
 
-/**
- * The messaging layer intentionally does not know the settings schema. A
- * settings service may provide its own public snapshot type as TSettings.
- */
-export interface ContentSettingsResponse<TSettings = unknown> {
+/** A content-settings response is validated against the public snapshot schema. */
+export interface ContentSettingsResponse {
   readonly requestId: string;
-  readonly settings: TSettings;
+  readonly settings: ContentSettingsSnapshot;
   readonly type: typeof MESSAGE_TYPES.contentSettings;
 }
 
@@ -208,7 +205,7 @@ function isContentSettingsResponse(value: unknown): value is ContentSettingsResp
   return (
     getValue(value, 'type') === MESSAGE_TYPES.contentSettings &&
     isMessageId(getValue(value, 'requestId')) &&
-    isPublicSettingsPayload(getValue(value, 'settings'))
+    isContentSettingsSnapshot(getValue(value, 'settings'))
   );
 }
 
