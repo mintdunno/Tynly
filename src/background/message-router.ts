@@ -1,4 +1,9 @@
 import type { SettingsStore } from '../core/settings/settings-store.ts';
+import {
+  ProviderService,
+  type ProviderServiceTransformInput
+} from '../core/providers/provider-service.ts';
+import { createDefaultProviderRegistry } from '../core/providers/provider-factory.ts';
 import { AppError, serializeAppError } from '../shared/errors/index.ts';
 import {
   MESSAGE_TYPES,
@@ -8,9 +13,25 @@ import {
   type TransformErrorResponse
 } from '../shared/messaging/index.ts';
 import type { RuntimeMessageSender } from '../shared/browser/runtime-messenger.ts';
+import type { TransformResult } from '../core/transform/types.ts';
+
+export interface TransformMessageService {
+  cancel(operationId: string): boolean;
+  transform(input: ProviderServiceTransformInput): Promise<TransformResult>;
+}
 
 export class BackgroundMessageRouter {
-  constructor(private readonly settingsStore: SettingsStore) {}
+  private readonly transformService: TransformMessageService;
+
+  constructor(
+    private readonly settingsStore: SettingsStore,
+    transformService: TransformMessageService = new ProviderService(
+      settingsStore,
+      createDefaultProviderRegistry()
+    )
+  ) {
+    this.transformService = transformService;
+  }
 
   async handle(
     rawMessage: unknown,
@@ -43,17 +64,35 @@ export class BackgroundMessageRouter {
           settings: await this.settingsStore.getContentSettings()
         };
       case MESSAGE_TYPES.cancelTransform:
+        this.transformService.cancel(message.operationId);
         return toErrorResponse(message, new AppError('CANCELLED'));
       case MESSAGE_TYPES.transformRequest:
-        return toErrorResponse(
+        return toTransformResponse(
           message,
-          new AppError(
-            'CONFIGURATION',
-            'Transforming text is not available until the provider service is configured.'
-          )
+          await this.transformService.transform({
+            operationId: message.operationId,
+            text: message.text,
+            trigger: message.trigger
+          })
         );
     }
   }
+}
+
+function toTransformResponse(
+  message: Extract<RequestMessage, { type: typeof MESSAGE_TYPES.transformRequest }>,
+  result: TransformResult
+): ResponseMessage {
+  if (result.operationId !== message.operationId) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  return {
+    type: MESSAGE_TYPES.transformResult,
+    requestId: message.requestId,
+    operationId: message.operationId,
+    text: result.text
+  };
 }
 
 function toErrorResponse(

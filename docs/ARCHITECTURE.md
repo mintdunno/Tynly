@@ -24,6 +24,13 @@ Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 - There is one active transform operation per stable editor or selection scope. Starting a newer operation aborts the earlier signal. A result is consumed only once when its scope and operation ID still match; cancelled, superseded, wrong-scope, and already-consumed results cannot apply. Target revision checks remain the final DOM safety gate.
 - Provider output is sanitized conservatively. Tynly trims outer whitespace and removes only an unmistakable full-output label, one enclosing code fence, or simple enclosing quotes. It rejects empty/non-text output and preserves potentially meaningful prose, labels, quotes, and multiple fences.
 
+## Provider flow
+
+- The background `ProviderService` reads the active private profile, resolves one adapter through `ProviderRegistry`, prepares the centralized prompt, and returns only a sanitized operation-bound result.
+- OpenAI, OpenAI-compatible, and Ollama adapters own protocol mapping only. They use API-root URL joining, bounded JSON parsing, safe model discovery, manual model persistence, and capability metadata; they never manipulate DOM or rebuild prompts.
+- `HttpClient` is the only provider fetch boundary. It enforces configured timeout bounds, forwards cancellation, maps status metadata to fixed application errors, and never reads failed response bodies.
+- Custom headers are validated case-insensitively. Adapter-required authentication and content headers win; Ollama may accept a local custom authorization header, while browser/transport headers are rejected.
+
 ## Security and privacy
 
 - Content scripts never receive API keys or raw provider configuration.

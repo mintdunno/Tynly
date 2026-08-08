@@ -71,3 +71,15 @@ Each stable editor or selection scope has at most one active operation. A replac
 Status: accepted.
 
 Provider output is not rewritten for style or meaning after it returns. The sanitizer removes only a whole-output label, a single enclosing fence, or simple enclosing quotes, then rejects empty/non-text values. Ambiguous labels, embedded quotes, prose, and multiple fences remain intact so Tynly does not destroy legitimate user content.
+
+## ADR-013 — Keep provider protocol behind a typed registry
+
+Status: accepted.
+
+`ProviderService` resolves provider kinds through one adapter registry and owns settings, model persistence, prompt preparation, cancellation, sanitization, and normalized errors. Adapters implement only their provider protocol, so adding Anthropic, Gemini, or custom JSON later does not add provider branches to transform business logic.
+
+## ADR-014 — Use one bounded background HTTP boundary
+
+Status: accepted.
+
+All provider requests use the injected `HttpClient`. It clamps profile timeouts, forwards caller cancellation, maps only safe HTTP status metadata, bounds successful JSON payloads, and avoids failed-body reads. API-root joining and case-insensitive header validation prevent credentials or browser-controlled transport headers from being smuggled into requests.

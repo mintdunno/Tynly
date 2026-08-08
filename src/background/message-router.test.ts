@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createDefaultAppSettings } from '../core/settings/defaults.ts';
 import { SettingsStore } from '../core/settings/settings-store.ts';
 import type { ExtensionLocalStorage } from '../shared/browser/local-storage.ts';
 import { SETTINGS_STORAGE_KEY } from '../shared/browser/local-storage.ts';
 import { MESSAGE_TYPES } from '../shared/messaging/index.ts';
-import { BackgroundMessageRouter } from './message-router.ts';
+import { BackgroundMessageRouter, type TransformMessageService } from './message-router.ts';
 
 class MemoryStorage implements ExtensionLocalStorage {
   private readonly values = new Map<string, unknown>();
@@ -93,7 +93,7 @@ describe('BackgroundMessageRouter', () => {
     ).resolves.toBeNull();
   });
 
-  it('returns a typed safe error until transform providers are implemented', async () => {
+  it('returns a typed safe error when no provider profile is configured', async () => {
     const router = new BackgroundMessageRouter(new SettingsStore(new MemoryStorage()));
 
     const response = await router.handle(
@@ -116,5 +116,71 @@ describe('BackgroundMessageRouter', () => {
         error: expect.objectContaining({ code: 'CONFIGURATION' })
       })
     );
+  });
+
+  it('routes a provider result without exposing provider service details', async () => {
+    const transformService: TransformMessageService = {
+      cancel: vi.fn(),
+      transform: vi.fn().mockResolvedValue({
+        operationId: 'operation-1',
+        text: 'Hello, team.'
+      })
+    };
+    const router = new BackgroundMessageRouter(
+      new SettingsStore(new MemoryStorage()),
+      transformService
+    );
+
+    await expect(
+      router.handle(
+        {
+          type: MESSAGE_TYPES.transformRequest,
+          requestId: 'request-1',
+          operationId: 'operation-1',
+          trigger: 'shortcut',
+          text: 'xin chao team'
+        },
+        trustedSender,
+        extensionId
+      )
+    ).resolves.toEqual({
+      type: MESSAGE_TYPES.transformResult,
+      requestId: 'request-1',
+      operationId: 'operation-1',
+      text: 'Hello, team.'
+    });
+
+    expect(transformService.transform).toHaveBeenCalledWith({
+      operationId: 'operation-1',
+      text: 'xin chao team',
+      trigger: 'shortcut'
+    });
+  });
+
+  it('forwards cancellation to the background transform service', async () => {
+    const transformService: TransformMessageService = {
+      cancel: vi.fn().mockReturnValue(true),
+      transform: vi.fn()
+    };
+    const router = new BackgroundMessageRouter(
+      new SettingsStore(new MemoryStorage()),
+      transformService
+    );
+
+    await expect(
+      router.handle(
+        {
+          type: MESSAGE_TYPES.cancelTransform,
+          requestId: 'request-1',
+          operationId: 'operation-1'
+        },
+        trustedSender,
+        extensionId
+      )
+    ).resolves.toMatchObject({
+      type: MESSAGE_TYPES.transformError,
+      error: { code: 'CANCELLED' }
+    });
+    expect(transformService.cancel).toHaveBeenCalledWith('operation-1');
   });
 });

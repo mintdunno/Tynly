@@ -61,15 +61,15 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 4 — Provider foundation, OpenAI-compatible APIs, and Ollama
 
-[ ] Define AIProvider, capabilities, model, and connection-test contracts.
-[ ] Implement ProviderRegistry and background-only ProviderService.
-[ ] Implement fetch timeout, cancellation, redaction, and error normalization.
-[ ] Implement per-profile model persistence, discovery, and manual fallback.
-[ ] Implement OpenAI adapter.
-[ ] Implement OpenAI-compatible adapter.
-[ ] Implement Ollama adapter.
-[ ] Mock and test requests, discovery, cancellation, errors, and connection checks.
-[ ] Review and commit Phase 4.
+- [x] Define AIProvider, capabilities, model, and connection-test contracts.
+- [x] Implement ProviderRegistry and background-only ProviderService.
+- [x] Implement fetch timeout, cancellation, redaction, and error normalization.
+- [x] Implement per-profile model persistence, discovery, and manual fallback.
+- [x] Implement OpenAI adapter.
+- [x] Implement OpenAI-compatible adapter.
+- [x] Implement Ollama adapter.
+- [x] Mock and test requests, discovery, cancellation, errors, and connection checks.
+- [-] Review and commit Phase 4.
 
 ## Phase 5 — Anthropic, Gemini, and custom JSON APIs
 
