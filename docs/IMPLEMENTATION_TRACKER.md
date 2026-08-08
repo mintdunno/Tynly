@@ -46,7 +46,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 - [x] Add browser API wrappers and background message router.
 - [x] Add typed user-safe error model and secret-safe logger.
 - [x] Test defaults, migrations, message validation, and redaction.
-- [-] Review and commit Phase 2.
+- [x] Review and commit Phase 2 (a3b90cb, 1601a5f).
 
 ## Phase 3 — Transform domain and response safety
 
