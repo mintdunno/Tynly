@@ -17,11 +17,11 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 - [x] Record architecture boundaries in docs/ARCHITECTURE.md.
 - [x] Record initial ADRs in docs/DECISIONS.md.
 - [x] Review documentation, Git status, and Git diff.
-- [ ] Commit the documentation-only phase.
+- [x] Commit the documentation-only phase (c4fd88).
 
 ## Phase 1 — MV3 foundation and brand system
 
-[ ] Select and pin pnpm dependencies without adding unnecessary runtime libraries.
+- [-] Select and pin pnpm dependencies without adding unnecessary runtime libraries.
 [ ] Add strict TypeScript configuration and project scripts.
 [ ] Add Vite/Manifest V3 build configuration.
 [ ] Add service worker, content, popup, and settings entry-point shells.

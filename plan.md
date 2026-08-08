@@ -4,7 +4,7 @@
 
 Approved on 2026-08-08. This is the canonical working plan for every developer and agent working in this repository. The detailed immutable approval record is mirrored in docs/IMPLEMENTATION_PLAN.md; live task state belongs in docs/IMPLEMENTATION_TRACKER.md.
 
-Current phase: Phase 0 — approved-plan handoff and tracking.
+Current phase: Phase 1 — MV3 foundation and Tynly brand system.
 
 ## Operating rules
 
@@ -150,4 +150,4 @@ Before implementation in each phase:
 
 ## Current handoff
 
-Phase 0 is documentation-only. Once it is reviewed and committed, Phase 1 may begin.
+Phase 0 was completed in commit c4fd88. Phase 1 is now in progress.
