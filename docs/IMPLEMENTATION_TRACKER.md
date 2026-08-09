@@ -124,7 +124,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Add deterministic local mock-provider server for browser tests.
 [x] Add Playwright extension fixtures and core workflow coverage.
 [x] Add CI for typecheck, lint, unit tests, build, and E2E tests.
-[ ] Add bundle-size inspection and record final sizes.
+[x] Add bundle-size inspection and record final sizes.
 [ ] Complete README, provider guide, architecture, tracker, and decision records.
 [ ] Execute manual Chrome verification checklist.
 [ ] Audit permissions, secrets, Git status, Git diff, Git log, and tracker.

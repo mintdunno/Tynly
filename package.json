@@ -19,9 +19,11 @@
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
     "test:e2e": "playwright test",
+    "bundle:inspect": "node scripts/check-bundle-size.mjs",
+    "bundle:check": "pnpm build && pnpm bundle:inspect",
     "brand:icons": "node scripts/render-brand-icons.mjs",
     "brand:check": "node scripts/check-brand-icons.mjs",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm bundle:check"
   },
   "dependencies": {
     "preact": "10.29.8"

@@ -38,7 +38,7 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
-      - name: Run type, lint, unit, and build checks
+      - name: Run type, lint, unit, build, and bundle checks
         run: pnpm check
 
       - name: Install the browser test runtime
