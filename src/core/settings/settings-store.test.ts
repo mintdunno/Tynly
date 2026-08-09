@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ExtensionLocalStorage } from '../../shared/browser/local-storage.ts';
+import type {
+  ExtensionLocalStorage,
+  LocalStorageChangeListener
+} from '../../shared/browser/local-storage.ts';
 import { SETTINGS_STORAGE_KEY } from '../../shared/browser/local-storage.ts';
 import { createDefaultAppSettings } from './defaults.ts';
 import { SettingsStore } from './settings-store.ts';
@@ -8,6 +11,7 @@ import { SettingsStore } from './settings-store.ts';
 class MemoryStorage implements ExtensionLocalStorage {
   readonly values = new Map<string, unknown>();
   restricted = false;
+  private readonly changeListeners = new Set<LocalStorageChangeListener>();
 
   async get(key: string): Promise<unknown> {
     return this.values.get(key);
@@ -15,6 +19,7 @@ class MemoryStorage implements ExtensionLocalStorage {
 
   async set(key: string, value: unknown): Promise<void> {
     this.values.set(key, structuredClone(value));
+    this.emitChange(key);
   }
 
   async remove(key: string): Promise<void> {
@@ -23,6 +28,16 @@ class MemoryStorage implements ExtensionLocalStorage {
 
   async restrictToTrustedContexts(): Promise<void> {
     this.restricted = true;
+  }
+
+  subscribeToChanges(listener: LocalStorageChangeListener): void {
+    this.changeListeners.add(listener);
+  }
+
+  private emitChange(key: string): void {
+    for (const listener of this.changeListeners) {
+      listener([key]);
+    }
   }
 }
 
@@ -113,6 +128,20 @@ describe('SettingsStore', () => {
     await expect(store.get()).resolves.toMatchObject({
       language: { source: 'en', target: 'en' },
       behavior: { afterTransform: 'preview' }
+    });
+  });
+
+  it('refreshes a cached settings value after another trusted context changes storage', async () => {
+    const storage = new MemoryStorage();
+    const store = new SettingsStore(storage);
+
+    await store.get();
+    const externallyUpdated = createDefaultAppSettings();
+    externallyUpdated.language.source = 'en';
+    await storage.set(SETTINGS_STORAGE_KEY, externallyUpdated);
+
+    await expect(store.get()).resolves.toMatchObject({
+      language: { source: 'en', target: 'en' }
     });
   });
 });

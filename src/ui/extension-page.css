@@ -22,25 +22,415 @@ body {
   background: inherit;
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
 button {
   border: 0;
   border-radius: 8px;
   padding: 8px 12px;
-  font: inherit;
   font-weight: 650;
   color: #fff;
   background: #162b4d;
   cursor: pointer;
 }
 
-button:focus-visible {
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
   outline: 3px solid #16b8a6;
   outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #c6d2e2;
+  border-radius: 8px;
+  padding: 8px 9px;
+  color: inherit;
+  background: #fff;
+}
+
+textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+label {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+label > span,
+legend {
+  color: #30486c;
+}
+
+small,
+.muted {
+  margin: 0;
+  color: #60728e;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.secondary-button {
+  color: #162b4d;
+  background: #e8eef6;
+}
+
+.danger-button {
+  color: #a42537;
+  background: #ffe8ed;
+}
+
+.text-button,
+.icon-button {
+  color: #162b4d;
+  background: transparent;
+}
+
+.text-button {
+  padding: 4px 0;
+  text-align: left;
+}
+
+.icon-button {
+  min-width: 34px;
+  padding: 7px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.notice {
+  margin: 0 0 16px;
+  border: 1px solid #b9eadf;
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #0e6158;
+  background: #e9fbf6;
+  font-size: 13px;
+}
+
+.notice.error {
+  border-color: #f0b9c3;
+  color: #9a2335;
+  background: #fff0f3;
+}
+
+.popup-shell {
+  width: 340px;
+  padding: 16px;
+}
+
+.popup-header,
+.popup-footer,
+.language-row,
+.provider-summary,
+.inline-controls,
+.button-row,
+.provider-editor-heading {
+  display: flex;
+  align-items: center;
+}
+
+.popup-header,
+.popup-footer,
+.provider-summary,
+.provider-editor-heading {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.product-name {
+  font-size: 18px;
+}
+
+.compact-section {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.compact-section h1 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.language-row {
+  gap: 7px;
+}
+
+.language-row label {
+  min-width: 0;
+  flex: 1;
+}
+
+.popup-footer {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #dce5f0;
+}
+
+.shortcut-hint {
+  color: #60728e;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.settings-shell {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  padding: 42px 24px 64px;
+}
+
+.settings-header {
+  margin-bottom: 26px;
+}
+
+.settings-header h1 {
+  max-width: 620px;
+  margin: 4px 0 8px;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1.12;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #0f8073;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-section {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  border: 1px solid #dce5f0;
+  border-radius: 14px;
+  padding: 20px;
+  background: #fff;
+}
+
+.section-heading h2,
+.provider-editor h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.section-heading p {
+  margin: 5px 0 0;
+  color: #60728e;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.stacked-label {
+  max-width: 420px;
+}
+
+.choice-list,
+.header-editor {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice-list label,
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 550;
+}
+
+.choice-list input,
+.toggle-row input {
+  width: auto;
+}
+
+.control-group {
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #e4ebf4;
+}
+
+.provider-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.inline-controls {
+  gap: 8px;
+}
+
+.provider-editor {
+  display: grid;
+  gap: 15px;
+  padding-top: 18px;
+  border-top: 1px solid #e4ebf4;
+}
+
+.provider-editor-heading .text-button {
+  white-space: nowrap;
+}
+
+.advanced-settings {
+  display: grid;
+  gap: 15px;
+  border: 1px solid #dce5f0;
+  border-radius: 9px;
+  padding: 11px;
+}
+
+.advanced-settings summary {
+  cursor: pointer;
+  color: #30486c;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.button-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.custom-api-fields,
+.custom-styles,
+.custom-style-new,
+.custom-style-row {
+  display: grid;
+  gap: 12px;
+}
+
+.custom-style-row {
+  grid-template-columns: minmax(150px, 0.45fr) minmax(220px, 1fr) auto;
+  align-items: end;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e4ebf4;
+}
+
+.privacy-section {
+  border-color: #b9eadf;
+  background: #f6fffc;
+}
+
+@media (max-width: 620px) {
+  .settings-shell {
+    padding: 28px 16px 48px;
+  }
+
+  .form-grid,
+  .provider-picker,
+  .custom-style-row {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-editor-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color: #edf5ff;
     background: #101827;
+  }
+
+  input,
+  select,
+  textarea,
+  .settings-section {
+    border-color: #314561;
+    color: #edf5ff;
+    background: #142039;
+  }
+
+  label > span,
+  legend,
+  .text-button,
+  .secondary-button {
+    color: #d6e3f4;
+  }
+
+  .secondary-button {
+    background: #263853;
+  }
+
+  .danger-button {
+    color: #ffbac5;
+    background: #4b2730;
+  }
+
+  .muted,
+  .section-heading p,
+  .shortcut-hint {
+    color: #b4c3d8;
+  }
+
+  .popup-footer,
+  .control-group,
+  .provider-editor,
+  .custom-style-row {
+    border-color: #314561;
+  }
+
+  .advanced-settings {
+    border-color: #314561;
+  }
+
+  .privacy-section {
+    border-color: #326b63;
+    background: #102c2a;
   }
 }

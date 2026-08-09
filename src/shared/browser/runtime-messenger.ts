@@ -1,5 +1,6 @@
 export interface RuntimeMessageSender {
   readonly id?: string;
+  readonly url?: string;
 }
 
 export type RuntimeMessageHandler = (

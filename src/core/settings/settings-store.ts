@@ -21,30 +21,44 @@ export type SettingsUpdater = (current: AppSettings) => AppSettings;
  */
 export class SettingsStore {
   private cachedSettings: AppSettings | null = null;
+  private cacheGeneration = 0;
   private initialization: Promise<AppSettings> | null = null;
   private writeQueue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly storage: ExtensionLocalStorage = createChromeLocalStorage()) {}
+  constructor(private readonly storage: ExtensionLocalStorage = createChromeLocalStorage()) {
+    this.storage.subscribeToChanges?.((changedKeys) => {
+      if (changedKeys.includes(SETTINGS_STORAGE_KEY)) {
+        this.invalidateCache();
+      }
+    });
+  }
 
   async initialize(): Promise<AppSettings> {
     if (this.cachedSettings !== null) {
       return cloneSettings(this.cachedSettings);
     }
 
+    const generation = this.cacheGeneration;
     if (this.initialization === null) {
-      this.initialization = this.initializeInternal().then(
+      const initialization = this.initializeInternal().then(
         (settings) => {
-          this.cachedSettings = cloneSettings(settings);
+          if (this.cacheGeneration === generation) {
+            this.cachedSettings = cloneSettings(settings);
+          }
           return settings;
         },
         (error: unknown) => {
-          this.initialization = null;
+          if (this.initialization === initialization) {
+            this.initialization = null;
+          }
           throw error;
         }
       );
+      this.initialization = initialization;
     }
 
-    return cloneSettings(await this.initialization);
+    const settings = await this.initialization;
+    return this.cacheGeneration === generation ? cloneSettings(settings) : this.initialize();
   }
 
   async get(): Promise<AppSettings> {
@@ -126,6 +140,12 @@ export class SettingsStore {
     } catch {
       throw new AppError('CONFIGURATION', 'Tynly settings could not be saved.');
     }
+  }
+
+  private invalidateCache(): void {
+    this.cacheGeneration += 1;
+    this.cachedSettings = null;
+    this.initialization = null;
   }
 }
 

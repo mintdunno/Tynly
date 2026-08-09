@@ -108,15 +108,16 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 8 — Popup and settings
 
-[ ] Implement compact popup controller.
-[ ] Implement general language/style settings and safe swap.
-[ ] Implement behavior and controls settings.
-[ ] Implement custom-style management.
-[ ] Implement provider list, editor, and capability-driven advanced fields.
-[ ] Implement model search, refresh, manual ID, and connection test UI.
-[ ] Implement privacy explanation and secret masking.
-[ ] Test persistence, model restoration, capability UI, and accessibility.
-[ ] Review and commit Phase 8.
+[x] Add trusted settings-page provider-operation bridge without exposing it to content scripts.
+[x] Implement compact popup controller.
+[x] Implement general language/style settings and safe swap.
+[x] Implement behavior and controls settings.
+[x] Implement custom-style management.
+[x] Implement provider list, editor, and capability-driven advanced fields.
+[x] Implement model search, refresh, manual ID, and connection test UI.
+[x] Implement privacy explanation and secret masking.
+[x] Test persistence, model restoration, capability UI, and accessibility.
+[-] Review and commit Phase 8.
 
 ## Phase 9 — Verification, documentation, and release
 

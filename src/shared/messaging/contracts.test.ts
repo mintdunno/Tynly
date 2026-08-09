@@ -153,4 +153,47 @@ describe('extension message contracts', () => {
       })
     ).toBe(false);
   });
+
+  it('validates narrowly scoped provider-operation messages with safe responses only', () => {
+    const request = {
+      profileId: 'openai-main',
+      requestId: 'provider:1',
+      type: MESSAGE_TYPES.listProviderModels
+    };
+    expect(isRequestMessage(request)).toBe(true);
+
+    expect(
+      isRequestMessage({
+        ...request,
+        endpoint: 'https://provider.example.test'
+      })
+    ).toBe(false);
+
+    expect(
+      isResponseMessage({
+        models: [{ id: 'gpt-test', label: 'GPT test' }],
+        profileId: 'openai-main',
+        requestId: 'provider:1',
+        type: MESSAGE_TYPES.providerModels
+      })
+    ).toBe(true);
+
+    expect(
+      isResponseMessage({
+        profileId: 'openai-main',
+        requestId: 'provider:2',
+        result: { ok: false, error: serializeAppError(new Error('apiKey=private')) },
+        type: MESSAGE_TYPES.providerConnectionTest
+      })
+    ).toBe(true);
+
+    expect(
+      isResponseMessage({
+        models: [{ id: 'gpt-test', label: 'GPT test', rawProviderData: 'secret' }],
+        profileId: 'openai-main',
+        requestId: 'provider:1',
+        type: MESSAGE_TYPES.providerModels
+      })
+    ).toBe(false);
+  });
 });

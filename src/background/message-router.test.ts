@@ -5,7 +5,12 @@ import { SettingsStore } from '../core/settings/settings-store.ts';
 import type { ExtensionLocalStorage } from '../shared/browser/local-storage.ts';
 import { SETTINGS_STORAGE_KEY } from '../shared/browser/local-storage.ts';
 import { MESSAGE_TYPES } from '../shared/messaging/index.ts';
-import { BackgroundMessageRouter, type TransformMessageService } from './message-router.ts';
+import { MAX_PROVIDER_MODELS_PER_RESPONSE } from '../shared/messaging/index.ts';
+import {
+  BackgroundMessageRouter,
+  type ProviderOperationMessageService,
+  type TransformMessageService
+} from './message-router.ts';
 
 class MemoryStorage implements ExtensionLocalStorage {
   private readonly values = new Map<string, unknown>();
@@ -32,6 +37,10 @@ class MemoryStorage implements ExtensionLocalStorage {
 describe('BackgroundMessageRouter', () => {
   const extensionId = 'tynly-test-extension';
   const trustedSender = { id: extensionId };
+  const trustedExtensionPageSender = {
+    id: extensionId,
+    url: `chrome-extension://${extensionId}/src/ui/settings/index.html`
+  };
 
   it('returns only a redacted settings snapshot to a trusted content sender', async () => {
     const storage = new MemoryStorage();
@@ -182,5 +191,75 @@ describe('BackgroundMessageRouter', () => {
       error: { code: 'CANCELLED' }
     });
     expect(transformService.cancel).toHaveBeenCalledWith('operation-1');
+  });
+
+  it('allows provider operations only from a trusted extension page', async () => {
+    const providerOperations: ProviderOperationMessageService = {
+      listModels: vi.fn().mockResolvedValue([{ id: 'gpt-test', label: 'GPT test' }]),
+      testConnection: vi.fn().mockResolvedValue({ ok: true })
+    };
+    const router = new BackgroundMessageRouter(
+      new SettingsStore(new MemoryStorage()),
+      { cancel: vi.fn(), transform: vi.fn() },
+      providerOperations
+    );
+    const request = {
+      type: MESSAGE_TYPES.listProviderModels,
+      requestId: 'provider-request',
+      profileId: 'openai-main'
+    };
+
+    await expect(router.handle(request, trustedSender, extensionId)).resolves.toBeNull();
+    await expect(
+      router.handle(
+        request,
+        {
+          id: extensionId,
+          url: `chrome-extension://${extensionId}/src/ui/popup/index.html`
+        },
+        extensionId
+      )
+    ).resolves.toBeNull();
+
+    await expect(router.handle(request, trustedExtensionPageSender, extensionId)).resolves.toEqual({
+      type: MESSAGE_TYPES.providerModels,
+      requestId: 'provider-request',
+      profileId: 'openai-main',
+      models: [{ id: 'gpt-test', label: 'GPT test' }]
+    });
+    expect(providerOperations.listModels).toHaveBeenCalledWith('openai-main');
+  });
+
+  it('bounds discovered models before they cross the background message bridge', async () => {
+    const providerOperations: ProviderOperationMessageService = {
+      listModels: vi.fn().mockResolvedValue(
+        Array.from({ length: MAX_PROVIDER_MODELS_PER_RESPONSE + 1 }, (_, index) => ({
+          id: `model-${index}`,
+          label: `Model ${index}`
+        }))
+      ),
+      testConnection: vi.fn()
+    };
+    const router = new BackgroundMessageRouter(
+      new SettingsStore(new MemoryStorage()),
+      { cancel: vi.fn(), transform: vi.fn() },
+      providerOperations
+    );
+
+    const response = await router.handle(
+      {
+        type: MESSAGE_TYPES.listProviderModels,
+        requestId: 'provider-request',
+        profileId: 'openai-main'
+      },
+      trustedExtensionPageSender,
+      extensionId
+    );
+
+    expect(response).toMatchObject({ type: MESSAGE_TYPES.providerModels });
+    if (response?.type !== MESSAGE_TYPES.providerModels) {
+      throw new Error('Expected provider models response.');
+    }
+    expect(response.models).toHaveLength(MAX_PROVIDER_MODELS_PER_RESPONSE);
   });
 });
