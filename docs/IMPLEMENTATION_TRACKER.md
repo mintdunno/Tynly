@@ -117,7 +117,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Implement model search, refresh, manual ID, and connection test UI.
 [x] Implement privacy explanation and secret masking.
 [x] Test persistence, model restoration, capability UI, and accessibility.
-[-] Review and commit Phase 8.
+[x] Review and commit Phase 8 (463a384).
 
 ## Phase 9 — Verification, documentation, and release
 
