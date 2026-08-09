@@ -96,15 +96,15 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 7 — Content triggers and interaction UI
 
-[ ] Implement content bootstrap and focused-target tracking.
-[ ] Implement lazy isolated Shadow DOM UI host.
-[ ] Implement Tynly field button and geometry lifecycle.
-[ ] Implement editable and normal-page selection workflows.
-[ ] Implement configurable IME-safe shortcut service.
-[ ] Implement TransformController integration, loading, cancellation, and errors.
-[ ] Implement toast, preview, result popover, copy, replace, and Undo actions.
-[ ] Test trigger parity, page non-mutation, IME, preview, and stale responses.
-[ ] Review and commit Phase 7.
+[x] Implement content bootstrap and focused-target tracking.
+[x] Implement lazy isolated Shadow DOM UI host.
+[x] Implement Tynly field button and geometry lifecycle.
+[x] Implement editable and normal-page selection workflows.
+[x] Implement configurable IME-safe shortcut service.
+[x] Implement TransformController integration, loading, cancellation, and errors.
+[x] Implement toast, preview, result popover, copy, replace, and Undo actions.
+[x] Test trigger parity, page non-mutation, IME, preview, and stale responses.
+[-] Review and commit Phase 7.
 
 ## Phase 8 — Popup and settings
 
