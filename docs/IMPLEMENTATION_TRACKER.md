@@ -131,3 +131,40 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Audit permissions, secrets, Git status, Git diff, Git log, and tracker.
 [ ] Update CHANGELOG.md with changes, commits, and important notes.
 [ ] Commit release documentation and push normally.
+
+## Phase 10 — One behavior setting and three safe shortcut bindings
+
+[x] Record the approved scope, migration, and acceptance criteria in the working plan.
+[ ] Bump and migrate the settings format without resetting existing user preferences.
+[ ] Make Behavior the only editable replace/preview decision.
+[ ] Remove per-control outcome fields from the settings schema, defaults, snapshots, UI, and runtime.
+[ ] Support one to three unique keyboard bindings for the same transform action.
+[ ] Preserve trusted-event, IME, AltGraph, repeat-event, and browser-conflict safeguards.
+[ ] Add migration, validation, settings, content, and shortcut regression coverage.
+[ ] Review and commit the coherent phase.
+
+## Phase 11 — Friendly provider quick-start and reliable connectivity checks
+
+[ ] Add safe OpenAI-compatible presets for OpenRouter, Groq, DeepSeek, Mistral, Together AI, Fireworks, Perplexity, and xAI.
+[ ] Make preset selection and provider configuration understandable without editing a raw API root.
+[ ] Ensure model refresh and connection testing read the freshly saved provider configuration.
+[ ] Present a clearly scoped Save & test state with credential-safe success and failure feedback.
+[ ] Add preset, connectivity, stale-cache, and provider-editor regression coverage.
+[ ] Review and commit the coherent phase.
+
+## Phase 12 — Minimalist popup and settings design
+
+[ ] Establish the refined visual tokens, hierarchy, surfaces, controls, and responsive behavior.
+[ ] Redesign the popup for fast, legible everyday changes.
+[ ] Redesign Settings around concise sections and a guided provider workflow.
+[ ] Preserve semantic labels, focus indicators, contrast, keyboard navigation, and dark mode.
+[ ] Run UI-focused automated checks and manual Chrome visual verification.
+[ ] Review and commit the coherent phase.
+
+## Phase 13 — Regression verification and release handoff
+
+[ ] Run format, typecheck, lint, unit, build, bundle, and E2E checks.
+[ ] Update provider, shortcut, manual-verification, and release documentation.
+[ ] Complete and record the manual Chrome verification result.
+[ ] Update CHANGELOG.md with changes, commits, and important notes.
+[ ] Review Git state, commit release notes, and push normally.

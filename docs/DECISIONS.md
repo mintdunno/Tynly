@@ -95,3 +95,26 @@ Web pages can dispatch synthetic click and keyboard events. Tynly therefore requ
 Status: accepted.
 
 Vite hashes and splits extension output, so source file sizes cannot establish a meaningful runtime budget. The release audit follows the generated manifest, page HTML, static imports, and CRX content-loader reference to measure each actual load graph. It enforces raw unpacked limits and fails when popup/settings entry code or the Preact JSX runtime reaches the content graph.
+
+## ADR-017: One transformation behavior with multiple safe shortcut bindings
+
+Status: accepted.
+
+Replace/Preview is a result-handling policy, not a property of the button that initiated a request.
+Tynly therefore keeps exactly one editable outcome setting under Behavior and removes the conflicting
+field-button and editable-selection variants. A shortcut setting may contain up to three unique
+bindings for the same action, so people can use the key combinations that suit their environment
+without creating divergent transform modes. The content listener retains its browser-trusted-event,
+IME-composition, AltGraph, repeat-event, and claimed-event protections.
+
+## ADR-018: Add provider brands as safe compatible presets and test saved settings fresh
+
+Status: accepted.
+
+Popular services that implement the already-supported OpenAI chat protocol are represented as
+friendly setup presets rather than duplicated network adapters. A preset fills a documented HTTPS API
+root and profile label but never a model or credential. The connection action saves first and performs
+a bounded real model request, which verifies endpoint, credentials, and model compatibility together.
+The background reads fresh persisted settings for provider operations so a test immediately following
+a Settings save cannot accidentally use a stale cached profile. Only fixed, credential-safe outcomes
+cross the extension-message boundary.

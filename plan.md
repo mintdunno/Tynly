@@ -4,7 +4,7 @@
 
 Approved on 2026-08-08. This is the canonical working plan for every developer and agent working in this repository. The detailed immutable approval record is mirrored in docs/IMPLEMENTATION_PLAN.md; live task state belongs in docs/IMPLEMENTATION_TRACKER.md.
 
-Current phase: Phase 9 — E2E verification, documentation, release audit, and handoff.
+Current phase: Phase 10 — Simplified controls, three shortcut bindings, provider quick-start, and UI refinement.
 
 ## Operating rules
 
@@ -135,6 +135,66 @@ Expected commits:
 - docs: complete Tynly architecture and provider guides
 - docs: update changelog and release notes
 
+### Phase 10 — One behavior setting and three safe shortcut bindings
+
+Remove the duplicate per-control replace/preview choices. The global Behavior setting becomes the
+single source of truth for every editable transform, while normal-page selections remain copy-only.
+Replace the single keyboard binding with up to three user-configurable bindings for that same action.
+Preserve browser-trusted-event, IME, AltGraph, repeat-event, and prevent-default safeguards.
+
+Acceptance: existing settings migrate without losing their chosen behavior or first shortcut; each
+enabled unique binding invokes the same behavior; field-button and selection controls contain only
+trigger-specific settings; and migration, validation, content, settings, and shortcut tests pass.
+
+Expected commit:
+
+- feat: simplify controls and add shortcut bindings
+
+### Phase 11 — Friendly provider quick-start and reliable connectivity checks
+
+Keep the proven built-in adapters and add clearly named, preconfigured OpenAI-compatible profiles
+for OpenRouter, Groq, DeepSeek, Mistral, Together AI, Fireworks, Perplexity, and xAI. Make provider setup a guided flow:
+one click supplies a safe API root, the user adds a key and model, and a visible Save & test action
+checks the actual saved configuration with a tiny model request. Provider operations must fetch fresh
+settings so an immediately saved secret/model cannot be tested from a stale background cache.
+
+Acceptance: each preset creates the correct safe profile without embedding a secret; model refresh
+and connection testing use the saved profile; success and safe failure states are visible in the
+editor; stale-cache regression coverage, preset coverage, and provider tests pass.
+
+Expected commit:
+
+- feat: improve provider setup and connection checks
+
+### Phase 12 — Minimalist popup and settings design
+
+Redesign the popup and settings pages around clear hierarchy, restrained surfaces, concise helper
+copy, accessible status feedback, responsive layout, and a coherent light/dark palette. Preserve
+keyboard navigation, semantic labels, focus visibility, native controls, privacy copy, and all
+functional behavior added in Phases 10–11.
+
+Acceptance: the new pages are visually consistent and usable at popup and narrow settings widths;
+controls remain accessible; the provider workflow is understandable without advanced knowledge; and
+UI tests, formatting, typecheck, lint, build, and a manual Chrome visual check pass.
+
+Expected commit:
+
+- feat: refine Tynly settings experience
+
+### Phase 13 — Regression verification and release handoff
+
+Run the complete automated suite, update documentation and the manual Chrome checklist for the new
+controls and provider presets, complete the outstanding manual verification, update CHANGELOG.md,
+review Git state, commit release notes, and push normally.
+
+Acceptance: all automated checks pass, the manual Chrome result is recorded, release documents list
+the new commits and operational notes, and no unrelated user-owned file is staged.
+
+Expected commits:
+
+- test: cover settings and provider improvements
+- docs: update controls and provider release notes
+
 ## Phase transition checklist
 
 Before implementation in each phase:
@@ -150,4 +210,4 @@ Before implementation in each phase:
 
 ## Current handoff
 
-Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9 is in progress.
+Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9's manual Chrome and changelog gates remain pending and will be repeated after the new work. Phase 10 is now in progress.
