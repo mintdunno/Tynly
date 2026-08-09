@@ -70,7 +70,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 - [x] Implement Ollama adapter.
 - [x] Mock and test requests, discovery, cancellation, errors, and connection checks.
 - [x] Harden successful response-body timeout coverage and UTF-8 byte limits found during review.
-- [-] Review and commit Phase 4.
+- [x] Review and commit Phase 4 (0438b37, 6706384).
 
 ## Phase 5 — Anthropic, Gemini, and custom JSON APIs
 
