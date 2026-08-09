@@ -5,7 +5,7 @@ import {
   toContentSettingsSnapshot,
   type ContentSettingsSnapshot
 } from '../core/settings/schema.ts';
-import { TYNLY_UI_HOST_ATTRIBUTE } from './ui/ui-host.ts';
+import { TYNLY_UI_HOST_ATTRIBUTE, TynlyUiHost } from './ui/ui-host.ts';
 
 import {
   ContentBootstrap,
@@ -27,7 +27,7 @@ describe('ContentBootstrap', () => {
     mockRect(input);
     document.body.append(input);
     const client = new BootstrapClient(defaultSettings(), { kind: 'result', text: 'after' });
-    const bootstrap = new ContentBootstrap(document, client);
+    const bootstrap = new ContentBootstrap(document, client, createTestUiHost());
 
     await expect(bootstrap.start()).resolves.toBe(true);
     input.focus();
@@ -55,7 +55,7 @@ describe('ContentBootstrap', () => {
     paragraph.textContent = 'Normal selection';
     document.body.append(input, paragraph);
     const client = new BootstrapClient(settings, { kind: 'result', text: 'after' });
-    const bootstrap = new ContentBootstrap(document, client);
+    const bootstrap = new ContentBootstrap(document, client, createTestUiHost());
 
     await bootstrap.start();
     input.focus();
@@ -87,7 +87,7 @@ describe('ContentBootstrap', () => {
     expect(document.querySelector(`[${TYNLY_UI_HOST_ATTRIBUTE}]`)).toBeNull();
   });
 
-  it('anchors a shortcut preview to its field even when visual controls are disabled', async () => {
+  it('does not send a transform for a synthetic shortcut event', async () => {
     const settings = defaultSettings();
     settings.behavior.afterTransform = 'preview';
     settings.controls.fieldButton.enabled = false;
@@ -113,11 +113,9 @@ describe('ContentBootstrap', () => {
     document.dispatchEvent(shortcut);
     await settle();
 
-    const panel = getHost().shadowRoot?.querySelector<HTMLDivElement>('.panel');
-    expect(shortcut.defaultPrevented).toBe(true);
-    expect(client.requests).toMatchObject([{ text: 'before', trigger: 'shortcut' }]);
-    expect(panel?.style.left).toBe('4px');
-    expect(panel?.style.top).toBe('88px');
+    expect(shortcut.defaultPrevented).toBe(false);
+    expect(client.requests).toEqual([]);
+    expect(document.querySelector(`[${TYNLY_UI_HOST_ATTRIBUTE}]`)).toBeNull();
     bootstrap.stop();
   });
 
@@ -178,6 +176,13 @@ function getHost(): HTMLDivElement {
     throw new Error('Expected Tynly UI host.');
   }
   return host;
+}
+
+function createTestUiHost(): TynlyUiHost {
+  return new TynlyUiHost(document, {
+    isTrustedEvent: () => true,
+    shadowMode: 'open'
+  });
 }
 
 function click(element: Element | null | undefined): void {

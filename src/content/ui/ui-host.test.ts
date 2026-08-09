@@ -12,7 +12,7 @@ describe('TynlyUiHost', () => {
     const input = document.createElement('input');
     document.body.append(input);
     mockRect(input, { bottom: 80, left: 20, right: 180, top: 40 });
-    const ui = new TynlyUiHost(document);
+    const ui = createTestUiHost();
 
     expect(document.querySelector(`[${TYNLY_UI_HOST_ATTRIBUTE}]`)).toBeNull();
 
@@ -37,8 +37,95 @@ describe('TynlyUiHost', () => {
     expect(button?.hidden).toBe(true);
   });
 
+  it('keeps the production root closed and rejects synthetic content actions', () => {
+    const input = document.createElement('input');
+    document.body.append(input);
+    let fieldActivations = 0;
+    let selectionActivations = 0;
+    let replacements = 0;
+    let copies = 0;
+    let closes = 0;
+    let undos = 0;
+    let dismissals = 0;
+    const openUi = new TynlyUiHost(document, { shadowMode: 'open' });
+    openUi.showFieldButton({
+      appearance: 'tynly-icon',
+      onActivate: () => {
+        fieldActivations += 1;
+      },
+      position: 'bottom-right',
+      target: input
+    });
+
+    const openHost = document.querySelector(`[${TYNLY_UI_HOST_ATTRIBUTE}]`) as HTMLDivElement;
+    openHost.shadowRoot?.querySelector<HTMLButtonElement>('[data-tynly-control="field"]')?.click();
+    openUi.showSelectionButton({
+      anchor: { bottom: 50, left: 40, right: 100, top: 20 },
+      onActivate: () => {
+        selectionActivations += 1;
+      }
+    });
+    openHost.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-tynly-control="selection"]')
+      ?.click();
+    openUi.showPreview({
+      onClose: () => {
+        closes += 1;
+      },
+      onCopy: () => {
+        copies += 1;
+      },
+      onReplace: () => {
+        replacements += 1;
+      },
+      target: input,
+      text: 'Preview text'
+    });
+    const panel = openHost.shadowRoot?.querySelector('.panel');
+    clickNamedButton(panel, 'Replace');
+    clickNamedButton(panel, 'Copy');
+    clickNamedButton(panel, 'Close');
+    openUi.showToast({
+      message: 'Transformed',
+      onDismiss: () => {
+        dismissals += 1;
+      },
+      onUndo: () => {
+        undos += 1;
+      }
+    });
+    clickNamedButton(openHost.shadowRoot?.querySelector('.toast'), 'Undo');
+    openUi.showToast({
+      message: 'Transformed',
+      onDismiss: () => {
+        dismissals += 1;
+      }
+    });
+    clickNamedButton(openHost.shadowRoot?.querySelector('.toast'), 'Dismiss');
+
+    expect(fieldActivations).toBe(0);
+    expect(selectionActivations).toBe(0);
+    expect(replacements).toBe(0);
+    expect(copies).toBe(0);
+    expect(closes).toBe(0);
+    expect(undos).toBe(0);
+    expect(dismissals).toBe(0);
+    openUi.destroy();
+
+    const closedUi = new TynlyUiHost(document);
+    closedUi.showFieldButton({
+      appearance: 'tynly-icon',
+      onActivate: () => undefined,
+      position: 'bottom-right',
+      target: input
+    });
+
+    const closedHost = document.querySelector(`[${TYNLY_UI_HOST_ATTRIBUTE}]`) as HTMLDivElement;
+    expect(closedHost.shadowRoot).toBeNull();
+  });
+
   it('renders transformed text as text, not page-visible or executable HTML', () => {
-    const ui = new TynlyUiHost(document);
+    const ui = createTestUiHost();
     let copied = 0;
     ui.showPageResult({
       anchor: { bottom: 70, left: 300, right: 360, top: 50 },
@@ -65,7 +152,7 @@ describe('TynlyUiHost', () => {
   it('wires preview, selection, toast, and close actions to their explicit callbacks', () => {
     const input = document.createElement('input');
     document.body.append(input);
-    const ui = new TynlyUiHost(document);
+    const ui = createTestUiHost();
     let selected = 0;
     let replaced = 0;
     let undone = 0;
@@ -108,6 +195,13 @@ function clickNamedButton(root: ParentNode | null | undefined, name: string): vo
     throw new Error(`Missing ${name} button`);
   }
   button.click();
+}
+
+function createTestUiHost(): TynlyUiHost {
+  return new TynlyUiHost(document, {
+    isTrustedEvent: () => true,
+    shadowMode: 'open'
+  });
 }
 
 function mockRect(

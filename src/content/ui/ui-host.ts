@@ -3,6 +3,13 @@ import type { ViewportAnchor } from '../selection/selection-tracker.ts';
 
 export const TYNLY_UI_HOST_ATTRIBUTE = 'data-tynly-ui-host';
 
+export interface TynlyUiHostOptions {
+  /** Production uses Event.isTrusted; tests can provide a deterministic substitute. */
+  readonly isTrustedEvent?: (event: Event) => boolean;
+  /** Production keeps the UI inaccessible to page scripts with a closed root. */
+  readonly shadowMode?: ShadowRootMode;
+}
+
 export interface FieldButtonPresentation {
   readonly appearance: 'monochrome-icon' | 'tynly-icon';
   readonly onActivate: () => void;
@@ -54,8 +61,16 @@ export class TynlyUiHost {
   private shadow: ShadowRoot | null = null;
   private toast: HTMLDivElement | null = null;
   private toastTimer: number | null = null;
+  private readonly isTrustedEvent: (event: Event) => boolean;
+  private readonly shadowMode: ShadowRootMode;
 
-  constructor(private readonly document: Document) {}
+  constructor(
+    private readonly document: Document,
+    options: TynlyUiHostOptions = {}
+  ) {
+    this.isTrustedEvent = options.isTrustedEvent ?? isTrustedUserEvent;
+    this.shadowMode = options.shadowMode ?? 'closed';
+  }
 
   showFieldButton(presentation: FieldButtonPresentation): void {
     this.ensure();
@@ -178,10 +193,15 @@ export class TynlyUiHost {
     toast.append(message);
     if (presentation.onUndo !== undefined) {
       toast.append(
-        createActionButton(this.document, 'Undo', () => {
-          presentation.onUndo?.();
-          this.hideToast();
-        })
+        createActionButton(
+          this.document,
+          'Undo',
+          () => {
+            presentation.onUndo?.();
+            this.hideToast();
+          },
+          this.isTrustedEvent
+        )
       );
     }
     toast.append(
@@ -192,6 +212,7 @@ export class TynlyUiHost {
           presentation.onDismiss?.();
           this.hideToast();
         },
+        this.isTrustedEvent,
         true
       )
     );
@@ -246,7 +267,7 @@ export class TynlyUiHost {
     host.setAttribute(TYNLY_UI_HOST_ATTRIBUTE, '');
     host.style.cssText =
       'all: initial; display: block; inset: 0; pointer-events: none; position: fixed; z-index: 2147483647;';
-    const shadow = host.attachShadow({ mode: 'open' });
+    const shadow = host.attachShadow({ mode: this.shadowMode });
     shadow.append(createStyles(this.document));
 
     const fieldButton = createControlButton(this.document, 'field');
@@ -255,8 +276,12 @@ export class TynlyUiHost {
     selectionButton.hidden = true;
     fieldButton.addEventListener('pointerdown', preventFocusLoss);
     selectionButton.addEventListener('pointerdown', preventFocusLoss);
-    fieldButton.addEventListener('click', () => this.fieldAction?.());
-    selectionButton.addEventListener('click', () => this.selectionAction?.());
+    fieldButton.addEventListener('click', (event) =>
+      this.activateIfTrusted(event, this.fieldAction)
+    );
+    selectionButton.addEventListener('click', (event) =>
+      this.activateIfTrusted(event, this.selectionAction)
+    );
 
     const panel = this.document.createElement('div');
     panel.className = 'panel';
@@ -303,7 +328,13 @@ export class TynlyUiHost {
     actionRow.className = 'actions';
     for (const action of actions) {
       actionRow.append(
-        createActionButton(this.document, action.label, action.onActivate, action.secondary)
+        createActionButton(
+          this.document,
+          action.label,
+          action.onActivate,
+          this.isTrustedEvent,
+          action.secondary
+        )
       );
     }
     panel.append(heading, output, actionRow);
@@ -387,6 +418,12 @@ export class TynlyUiHost {
     if (this.toastTimer !== null) {
       this.document.defaultView?.clearTimeout(this.toastTimer);
       this.toastTimer = null;
+    }
+  }
+
+  private activateIfTrusted(event: Event, action: (() => void) | null): void {
+    if (this.isTrustedEvent(event)) {
+      action?.();
     }
   }
 }
@@ -505,14 +542,23 @@ function createActionButton(
   document: Document,
   label: string,
   onActivate: () => void,
+  isTrustedEvent: (event: Event) => boolean,
   secondary = false
 ): HTMLButtonElement {
   const button = document.createElement('button');
   button.className = secondary ? 'action secondary' : 'action';
   button.textContent = label;
   button.type = 'button';
-  button.addEventListener('click', onActivate);
+  button.addEventListener('click', (event) => {
+    if (isTrustedEvent(event)) {
+      onActivate();
+    }
+  });
   return button;
+}
+
+function isTrustedUserEvent(event: Event): boolean {
+  return event.isTrusted;
 }
 
 function createTynlyMark(

@@ -18,7 +18,8 @@ describe('ShortcutService', () => {
       () => {
         calls += 1;
         return true;
-      }
+      },
+      { isTrustedEvent: () => true }
     );
     service.start();
 
@@ -44,7 +45,8 @@ describe('ShortcutService', () => {
       () => {
         calls += 1;
         return true;
-      }
+      },
+      { isTrustedEvent: () => true }
     );
     service.start();
 
@@ -63,6 +65,60 @@ describe('ShortcutService', () => {
     );
 
     expect(calls).toBe(0);
+    service.stop();
+  });
+
+  it('ignores a synthetic matching shortcut by default', () => {
+    let calls = 0;
+    const settings = createDefaultAppSettings().controls.shortcut;
+    const service = new ShortcutService(
+      document,
+      () => settings,
+      () => {
+        calls += 1;
+        return true;
+      }
+    );
+    service.start();
+
+    const event = new KeyboardEvent('keydown', {
+      altKey: true,
+      bubbles: true,
+      cancelable: true,
+      code: 'KeyA'
+    });
+    document.dispatchEvent(event);
+
+    expect(calls).toBe(0);
+    expect(event.defaultPrevented).toBe(false);
+    service.stop();
+  });
+
+  it('does not let synthetic composition events suppress a trusted shortcut', () => {
+    let calls = 0;
+    const settings = createDefaultAppSettings().controls.shortcut;
+    const service = new ShortcutService(
+      document,
+      () => settings,
+      () => {
+        calls += 1;
+        return true;
+      },
+      { isTrustedEvent: (event) => event.type === 'keydown' }
+    );
+    service.start();
+
+    document.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    const shortcut = new KeyboardEvent('keydown', {
+      altKey: true,
+      bubbles: true,
+      cancelable: true,
+      code: 'KeyA'
+    });
+    document.dispatchEvent(shortcut);
+
+    expect(calls).toBe(1);
+    expect(shortcut.defaultPrevented).toBe(true);
     service.stop();
   });
 });
