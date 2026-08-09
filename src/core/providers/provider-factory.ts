@@ -1,4 +1,6 @@
 import { HttpClient } from './http-client.ts';
+import { AnthropicProvider } from './anthropic-adapter.ts';
+import { GeminiProvider } from './gemini-adapter.ts';
 import { OllamaProvider } from './ollama-adapter.ts';
 import { OpenAiCompatibleProvider } from './openai-compatible-adapter.ts';
 import { OpenAiProvider } from './openai-adapter.ts';
@@ -13,6 +15,8 @@ export function createDefaultProviders(
   return [
     new OpenAiProvider(httpClient),
     new OpenAiCompatibleProvider(httpClient),
+    new AnthropicProvider(httpClient),
+    new GeminiProvider(httpClient),
     new OllamaProvider(httpClient)
   ];
 }

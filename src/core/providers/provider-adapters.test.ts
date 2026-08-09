@@ -1,11 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  AnthropicProviderProfile,
+  GeminiProviderProfile,
   OllamaProviderProfile,
   OpenAiCompatibleProviderProfile,
   OpenAiProviderProfile
 } from '../settings/schema.ts';
 
+import { AnthropicProvider } from './anthropic-adapter.ts';
+import { GeminiProvider } from './gemini-adapter.ts';
 import { HttpClient, type HttpFetch } from './http-client.ts';
 import { OllamaProvider } from './ollama-adapter.ts';
 import { OpenAiCompatibleProvider } from './openai-compatible-adapter.ts';
@@ -50,6 +54,30 @@ const compatibleProfile: OpenAiCompatibleProviderProfile = {
   baseUrl: 'https://gateway.example/v1/',
   apiKey: 'gateway-secret',
   headers: [{ name: 'X-Tenant', value: 'team-a' }]
+};
+
+const anthropicProfile: AnthropicProviderProfile = {
+  id: 'anthropic-main',
+  name: 'Anthropic main',
+  kind: 'anthropic',
+  selectedModelId: 'claude-test',
+  timeoutMs: 30_000,
+  temperature: 0,
+  maxOutputTokens: 128,
+  baseUrl: 'https://api.anthropic.com/v1',
+  apiKey: 'anthropic-secret'
+};
+
+const geminiProfile: GeminiProviderProfile = {
+  id: 'gemini-main',
+  name: 'Gemini main',
+  kind: 'gemini',
+  selectedModelId: 'models/gemini-2.5-flash',
+  timeoutMs: 30_000,
+  temperature: 0,
+  maxOutputTokens: 128,
+  baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+  apiKey: 'gemini-secret'
 };
 
 const ollamaProfile: OllamaProviderProfile = {
@@ -184,6 +212,144 @@ describe('provider adapters', () => {
       code: 'CONFIGURATION'
     });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('sends Anthropic Messages requests with versioned header authentication', async () => {
+    const fetch = createFetch(responseBody({ content: [{ type: 'text', text: 'Hello, team.' }] }));
+    const adapter = new AnthropicProvider(new HttpClient({ fetch }));
+
+    await expect(adapter.transform(transformRequest, anthropicProfile)).resolves.toEqual({
+      operationId: 'operation-1',
+      text: 'Hello, team.'
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.anthropic.com/v1/messages',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(fetch.mock.calls[0]?.[1]?.headers).toEqual({
+      Accept: 'application/json',
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+      'x-api-key': 'anthropic-secret'
+    });
+    expect(requestBody(fetch)).toEqual({
+      max_tokens: 128,
+      messages: [{ content: transformRequest.prompt, role: 'user' }],
+      model: 'claude-test',
+      stream: false,
+      temperature: 0
+    });
+  });
+
+  it('discovers Anthropic models and uses a compact connection request', async () => {
+    const modelFetch = createFetch(responseBody({ data: [{ id: 'claude-test' }] }));
+    const modelAdapter = new AnthropicProvider(new HttpClient({ fetch: modelFetch }));
+
+    await expect(modelAdapter.listModels(anthropicProfile)).resolves.toEqual([
+      { id: 'claude-test', label: 'claude-test' }
+    ]);
+    expect(modelFetch).toHaveBeenCalledWith(
+      'https://api.anthropic.com/v1/models',
+      expect.objectContaining({ method: 'GET' })
+    );
+
+    const connectionFetch = createFetch(responseBody({ content: [{ type: 'text', text: 'OK' }] }));
+    const connectionAdapter = new AnthropicProvider(new HttpClient({ fetch: connectionFetch }));
+    await expect(connectionAdapter.testConnection(anthropicProfile)).resolves.toEqual({ ok: true });
+    expect(requestBody(connectionFetch)).toMatchObject({
+      max_tokens: 1,
+      messages: [{ content: 'Reply with OK.', role: 'user' }],
+      model: 'claude-test',
+      stream: false
+    });
+  });
+
+  it('uses Gemini header authentication, canonical model routes, and generation config', async () => {
+    const fetch = createFetch(
+      responseBody({ candidates: [{ content: { parts: [{ text: 'Hello, team.' }] } }] })
+    );
+    const adapter = new GeminiProvider(new HttpClient({ fetch }));
+
+    await expect(adapter.transform(transformRequest, geminiProfile)).resolves.toEqual({
+      operationId: 'operation-1',
+      text: 'Hello, team.'
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(fetch.mock.calls[0]?.[1]?.headers).toEqual({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'x-goog-api-key': 'gemini-secret'
+    });
+    expect(requestBody(fetch)).toEqual({
+      contents: [{ parts: [{ text: transformRequest.prompt }], role: 'user' }],
+      generationConfig: { maxOutputTokens: 128, temperature: 0 }
+    });
+    expect(fetch.mock.calls[0]?.[0]).not.toContain('gemini-secret');
+  });
+
+  it('discovers route-safe Gemini IDs and rejects an unsafe manual model path', async () => {
+    const fetch = createFetch(
+      responseBody({
+        models: [
+          { name: 'models/gemini-2.5-flash' },
+          { name: 'models/gemini-2.5-flash' },
+          { name: 'models/gemini/escaped' }
+        ]
+      })
+    );
+    const adapter = new GeminiProvider(new HttpClient({ fetch }));
+
+    await expect(adapter.listModels(geminiProfile)).resolves.toEqual([
+      { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash' }
+    ]);
+
+    const unsafeFetch = createFetch(
+      responseBody({ candidates: [{ content: { parts: [{ text: 'Should not run.' }] } }] })
+    );
+    const unsafeAdapter = new GeminiProvider(new HttpClient({ fetch: unsafeFetch }));
+    await expect(
+      unsafeAdapter.transform(transformRequest, {
+        ...geminiProfile,
+        selectedModelId: 'models/gemini/escaped'
+      })
+    ).rejects.toMatchObject({ code: 'CONFIGURATION' });
+    expect(unsafeFetch).not.toHaveBeenCalled();
+  });
+
+  it('uses a compact Gemini connection request', async () => {
+    const fetch = createFetch(
+      responseBody({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })
+    );
+    const adapter = new GeminiProvider(new HttpClient({ fetch }));
+
+    await expect(adapter.testConnection(geminiProfile)).resolves.toEqual({ ok: true });
+    expect(requestBody(fetch)).toEqual({
+      contents: [{ parts: [{ text: 'Reply with OK.' }], role: 'user' }],
+      generationConfig: { maxOutputTokens: 1 }
+    });
+  });
+
+  it('rejects Anthropic and Gemini responses without usable text', async () => {
+    const anthropicFetch = createFetch(responseBody({ content: [{ type: 'tool_use' }] }));
+    const anthropicAdapter = new AnthropicProvider(new HttpClient({ fetch: anthropicFetch }));
+    await expect(
+      anthropicAdapter.transform(transformRequest, anthropicProfile)
+    ).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE'
+    });
+
+    const geminiFetch = createFetch(
+      responseBody({ candidates: [{ content: { parts: [{ inlineData: {} }] } }] })
+    );
+    const geminiAdapter = new GeminiProvider(new HttpClient({ fetch: geminiFetch }));
+    await expect(geminiAdapter.transform(transformRequest, geminiProfile)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE'
+    });
   });
 
   it('sends Ollama chat requests with local custom authorization and options', async () => {

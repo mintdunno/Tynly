@@ -4,6 +4,7 @@ import { AppError, getAppErrorUserMessage } from '../../shared/errors/index.ts';
 import type { OpenAiProviderProfile } from '../settings/schema.ts';
 import type { AIProvider } from './types.ts';
 
+import { createDefaultProviderRegistry } from './provider-factory.ts';
 import { ProviderRegistry } from './provider-registry.ts';
 
 function createProvider<K extends AIProvider['kind']>(kind: K): AIProvider<K> {
@@ -44,6 +45,18 @@ const openAiProfile: OpenAiProviderProfile = {
 };
 
 describe('ProviderRegistry', () => {
+  it('registers the Phase 5 built-in adapters in the default factory', () => {
+    const registry = createDefaultProviderRegistry();
+
+    expect([
+      registry.resolve('openai').kind,
+      registry.resolve('openai-compatible').kind,
+      registry.resolve('anthropic').kind,
+      registry.resolve('gemini').kind,
+      registry.resolve('ollama').kind
+    ]).toEqual(['openai', 'openai-compatible', 'anthropic', 'gemini', 'ollama']);
+  });
+
   it('resolves the registered adapter by settings provider kind', () => {
     const openAi = createProvider('openai');
     const ollama = createProvider('ollama');

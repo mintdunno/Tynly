@@ -21,3 +21,5 @@ export {
   OpenAICompatibleAdapter
 } from './openai-compatible-adapter.ts';
 export { OllamaProvider, OllamaAdapter } from './ollama-adapter.ts';
+export { AnthropicProvider, AnthropicAdapter } from './anthropic-adapter.ts';
+export { GeminiProvider, GeminiAdapter } from './gemini-adapter.ts';

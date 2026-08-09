@@ -12,6 +12,8 @@ export const MAX_PROVIDER_MODEL_LABEL_LENGTH = 256;
 export const MAX_PROVIDER_TEXT_LENGTH = 50_000;
 export const MAX_PROVIDER_RESPONSE_BYTES = 1_000_000;
 
+const GEMINI_MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/u;
+
 /** Headers controlled by an adapter or by the browser must never be replaced by user input. */
 const RESERVED_CUSTOM_HEADERS = new Set([
   'authorization',
@@ -227,6 +229,35 @@ export function parseOllamaModelList(value: unknown): readonly BoundedModel[] {
   });
 }
 
+/** Parses Gemini's `models` array and stores route-safe IDs without the `models/` prefix. */
+export function parseGeminiModelList(value: unknown): readonly BoundedModel[] {
+  if (!isPlainRecord(value)) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  const rawModels = readDataProperty(value, 'models');
+  if (!Array.isArray(rawModels)) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  return dedupeModels(rawModels, (entry) =>
+    normalizeGeminiModelId(readDataProperty(entry, 'name'))
+  );
+}
+
+/**
+ * Gemini discovery prefixes model names with `models/`, while generation routes
+ * require a single model path segment after their own `/models/` prefix.
+ */
+export function normalizeGeminiModelId(value: unknown): string | null {
+  if (!validModelId(value)) {
+    return null;
+  }
+
+  const normalized = value.startsWith('models/') ? value.slice('models/'.length) : value;
+  return GEMINI_MODEL_ID_PATTERN.test(normalized) ? normalized : null;
+}
+
 /** Parses one successful JSON body without preserving parser/provider diagnostics. */
 export async function readJsonResponse(response: Response): Promise<unknown> {
   try {
@@ -314,6 +345,81 @@ export function readChatText(value: unknown, path: 'openai' | 'ollama'): string 
   }
 
   return content;
+}
+
+/** Reads the first valid text block from Anthropic's Messages response. */
+export function readAnthropicText(value: unknown): string {
+  if (!isPlainRecord(value)) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  const content = readDataProperty(value, 'content');
+  if (!Array.isArray(content) || content.length === 0 || content.length > 16) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  for (const block of content) {
+    if (!isPlainRecord(block) || readDataProperty(block, 'type') !== 'text') {
+      continue;
+    }
+
+    const text = readDataProperty(block, 'text');
+    if (isBoundedText(text, MAX_PROVIDER_TEXT_LENGTH, { allowNewlines: true })) {
+      return text;
+    }
+  }
+
+  throw new AppError('INVALID_RESPONSE');
+}
+
+/** Joins bounded Gemini text parts from its first candidate into one plain result. */
+export function readGeminiText(value: unknown): string {
+  if (!isPlainRecord(value)) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  const candidates = readDataProperty(value, 'candidates');
+  if (!Array.isArray(candidates) || candidates.length === 0 || candidates.length > 16) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  const firstCandidate = candidates[0];
+  if (!isPlainRecord(firstCandidate)) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  const content = readDataProperty(firstCandidate, 'content');
+  if (!isPlainRecord(content)) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  const parts = readDataProperty(content, 'parts');
+  if (!Array.isArray(parts) || parts.length === 0 || parts.length > 16) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  let text = '';
+  for (const part of parts) {
+    if (!isPlainRecord(part)) {
+      continue;
+    }
+
+    const partText = readDataProperty(part, 'text');
+    if (typeof partText !== 'string') {
+      continue;
+    }
+
+    text += partText;
+    if (text.length > MAX_PROVIDER_TEXT_LENGTH) {
+      throw new AppError('INVALID_RESPONSE');
+    }
+  }
+
+  if (!isBoundedText(text, MAX_PROVIDER_TEXT_LENGTH, { allowNewlines: true })) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  return text;
 }
 
 function readOpenAiContent(value: Record<string, unknown>): unknown {

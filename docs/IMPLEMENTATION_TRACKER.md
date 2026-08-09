@@ -74,8 +74,8 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 5 — Anthropic, Gemini, and custom JSON APIs
 
-[ ] Implement Anthropic adapter and tests.
-[ ] Implement Gemini adapter and tests.
+[x] Implement Anthropic adapter and tests.
+[x] Implement Gemini adapter and tests.
 [ ] Define custom API configuration and endpoint/header validation.
 [ ] Implement safe JSON-template interpolation.
 [ ] Implement safe response-path extraction.
