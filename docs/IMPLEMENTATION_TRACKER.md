@@ -121,9 +121,9 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 9 — Verification, documentation, and release
 
-[ ] Add deterministic local mock-provider server for browser tests.
-[ ] Add Playwright extension fixtures and core workflow coverage.
-[ ] Add CI for typecheck, lint, unit tests, build, and E2E tests.
+[x] Add deterministic local mock-provider server for browser tests.
+[x] Add Playwright extension fixtures and core workflow coverage.
+[x] Add CI for typecheck, lint, unit tests, build, and E2E tests.
 [ ] Add bundle-size inspection and record final sizes.
 [ ] Complete README, provider guide, architecture, tracker, and decision records.
 [ ] Execute manual Chrome verification checklist.
