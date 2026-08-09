@@ -47,7 +47,7 @@ export class OllamaProvider implements AIProvider<'ollama'> {
     signal?: AbortSignal
   ): Promise<readonly ProviderModelInfo[]> {
     try {
-      const response = await this.httpClient.request(
+      const payload = await this.httpClient.request(
         withOptionalSignal(
           {
             headers: this.headers(profile),
@@ -56,9 +56,10 @@ export class OllamaProvider implements AIProvider<'ollama'> {
             url: joinProviderUrl(profile.baseUrl, '/api/tags', 'ollama')
           },
           signal
-        )
+        ),
+        readJsonResponse
       );
-      return parseOllamaModelList(await readJsonResponse(response));
+      return parseOllamaModelList(payload);
     } catch (error) {
       if (error instanceof AppError && error.code === 'MODEL_UNAVAILABLE') {
         return [];
@@ -73,7 +74,7 @@ export class OllamaProvider implements AIProvider<'ollama'> {
   ): Promise<ProviderConnectionTestResult> {
     try {
       assertSelectedModel(profile);
-      const response = await this.httpClient.request(
+      const payload = await this.httpClient.request(
         withOptionalSignal(
           {
             body: JSON.stringify(buildChatBody(profile, CONNECTION_PROMPT, 1)),
@@ -83,9 +84,10 @@ export class OllamaProvider implements AIProvider<'ollama'> {
             url: joinProviderUrl(profile.baseUrl, '/api/chat', 'ollama')
           },
           signal
-        )
+        ),
+        readJsonResponse
       );
-      readChatText(await readJsonResponse(response), 'ollama');
+      readChatText(payload, 'ollama');
       return { ok: true };
     } catch (error) {
       return createConnectionTestFailure(error);
@@ -99,7 +101,7 @@ export class OllamaProvider implements AIProvider<'ollama'> {
   ): Promise<ProviderTransformResult> {
     assertSelectedModel(profile);
     assertPrompt(request.prompt);
-    const response = await this.httpClient.request(
+    const payload = await this.httpClient.request(
       withOptionalSignal(
         {
           body: JSON.stringify(
@@ -116,12 +118,13 @@ export class OllamaProvider implements AIProvider<'ollama'> {
           url: joinProviderUrl(profile.baseUrl, '/api/chat', 'ollama')
         },
         signal
-      )
+      ),
+      readJsonResponse
     );
 
     return {
       operationId: request.operationId,
-      text: readChatText(await readJsonResponse(response), 'ollama')
+      text: readChatText(payload, 'ollama')
     };
   }
 

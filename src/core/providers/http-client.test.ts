@@ -108,6 +108,34 @@ describe('HttpClient', () => {
     }
   });
 
+  it('keeps the timeout active while a successful response is being read', async () => {
+    vi.useFakeTimers();
+
+    try {
+      let requestSignal: AbortSignal | undefined;
+      const fetch = vi.fn<HttpFetch>((_url, init) => {
+        requestSignal = init?.signal ?? undefined;
+        return Promise.resolve(successResponse());
+      });
+      const client = new HttpClient({ fetch });
+      const pending = client.request(
+        {
+          url: 'https://provider.example.test/v1/models',
+          timeoutMs: MIN_HTTP_TIMEOUT_MS
+        },
+        async () => awaitAbort(requestSignal)
+      );
+      const rejected = expect(pending).rejects.toMatchObject({ code: 'TIMEOUT' });
+
+      await vi.advanceTimersByTimeAsync(MIN_HTTP_TIMEOUT_MS);
+
+      await rejected;
+      expect(requestSignal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('converts fetch failures to a safe NETWORK error without response or request diagnostics', async () => {
     const privateUrl = 'https://user:password@provider.example.test/v1?api_key=super-secret';
     const privateBody = 'Bearer super-secret-token private prompt';

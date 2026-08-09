@@ -242,17 +242,65 @@ export async function readJsonResponse(response: Response): Promise<unknown> {
         throw new AppError('INVALID_RESPONSE');
       }
     }
-    const body = await response.text();
-    if (body.length > MAX_PROVIDER_RESPONSE_BYTES) {
-      throw new AppError('INVALID_RESPONSE');
-    }
-    return JSON.parse(body) as unknown;
+    return JSON.parse(await readBoundedResponseText(response)) as unknown;
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
     }
     throw new AppError('INVALID_RESPONSE');
   }
+}
+
+/**
+ * Reads a successful provider body as UTF-8 while limiting the actual byte
+ * count. `Response.text()` buffers an entire stream first, so it cannot enforce
+ * the cap for chunked responses with no Content-Length header.
+ */
+async function readBoundedResponseText(response: Response): Promise<string> {
+  const stream = response.body;
+  if (stream === null) {
+    const text = await response.text();
+    if (new TextEncoder().encode(text).byteLength > MAX_PROVIDER_RESPONSE_BYTES) {
+      throw new AppError('INVALID_RESPONSE');
+    }
+    return text;
+  }
+
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) {
+        try {
+          await reader.cancel();
+        } catch {
+          // The response is already rejected; cancellation diagnostics are not safe to expose.
+        }
+        throw new AppError('INVALID_RESPONSE');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
 
 export function readChatText(value: unknown, path: 'openai' | 'ollama'): string {

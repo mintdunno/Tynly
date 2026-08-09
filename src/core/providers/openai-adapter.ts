@@ -48,7 +48,7 @@ export class OpenAiProvider implements AIProvider<'openai'> {
   ): Promise<readonly ProviderModelInfo[]> {
     try {
       assertApiKey(profile);
-      const response = await this.httpClient.request(
+      const payload = await this.httpClient.request(
         withOptionalSignal(
           {
             headers: this.headers(profile),
@@ -57,9 +57,9 @@ export class OpenAiProvider implements AIProvider<'openai'> {
             url: joinProviderUrl(profile.baseUrl, '/models', 'https')
           },
           signal
-        )
+        ),
+        readJsonResponse
       );
-      const payload = await readJsonResponse(response);
       return parseModelList(payload, (entry) => {
         const id = readDataProperty(entry, 'id');
         return typeof id === 'string' ? id : null;
@@ -79,7 +79,7 @@ export class OpenAiProvider implements AIProvider<'openai'> {
     try {
       assertSelectedModel(profile);
       assertApiKey(profile);
-      const response = await this.httpClient.request(
+      const payload = await this.httpClient.request(
         withOptionalSignal(
           {
             body: JSON.stringify(buildChatBody(profile, CONNECTION_PROMPT, 1)),
@@ -89,9 +89,10 @@ export class OpenAiProvider implements AIProvider<'openai'> {
             url: joinProviderUrl(profile.baseUrl, '/chat/completions', 'https')
           },
           signal
-        )
+        ),
+        readJsonResponse
       );
-      readChatText(await readJsonResponse(response), 'openai');
+      readChatText(payload, 'openai');
       return { ok: true };
     } catch (error) {
       return createConnectionTestFailure(error);
@@ -106,7 +107,7 @@ export class OpenAiProvider implements AIProvider<'openai'> {
     assertSelectedModel(profile);
     assertApiKey(profile);
     assertPrompt(request.prompt);
-    const response = await this.httpClient.request(
+    const payload = await this.httpClient.request(
       withOptionalSignal(
         {
           body: JSON.stringify(
@@ -123,12 +124,13 @@ export class OpenAiProvider implements AIProvider<'openai'> {
           url: joinProviderUrl(profile.baseUrl, '/chat/completions', 'https')
         },
         signal
-      )
+      ),
+      readJsonResponse
     );
 
     return {
       operationId: request.operationId,
-      text: readChatText(await readJsonResponse(response), 'openai')
+      text: readChatText(payload, 'openai')
     };
   }
 

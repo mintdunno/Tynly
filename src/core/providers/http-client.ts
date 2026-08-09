@@ -23,6 +23,12 @@ export interface HttpClientOptions {
 }
 
 /**
+ * Reads a successful response while the request timeout and cancellation signal
+ * are still active. Provider adapters use this for bounded JSON parsing.
+ */
+export type HttpResponseReader<T> = (response: Response) => Promise<T> | T;
+
+/**
  * A minimal, provider-neutral fetch boundary for the extension background.
  * It intentionally never reads or records response error bodies because they
  * can contain provider diagnostics, request text, or credentials.
@@ -34,7 +40,12 @@ export class HttpClient {
     this.fetchImplementation = options.fetch ?? defaultFetch;
   }
 
-  async request(request: HttpRequest): Promise<Response> {
+  async request(request: HttpRequest): Promise<Response>;
+  async request<T>(request: HttpRequest, readResponse: HttpResponseReader<T>): Promise<T>;
+  async request<T>(
+    request: HttpRequest,
+    readResponse?: HttpResponseReader<T>
+  ): Promise<Response | T> {
     if (request.signal?.aborted) {
       throw new AppError('CANCELLED');
     }
@@ -72,12 +83,8 @@ export class HttpClient {
         throw new AppError(mapHttpStatusToErrorCode(response.status));
       }
 
-      return response;
+      return readResponse === undefined ? response : await readResponse(response);
     } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-
       // A caller abort always takes precedence when it races with the timeout.
       if (cancelledByCaller || request.signal?.aborted) {
         throw new AppError('CANCELLED');
@@ -85,6 +92,10 @@ export class HttpClient {
 
       if (timedOut) {
         throw new AppError('TIMEOUT');
+      }
+
+      if (error instanceof AppError) {
+        throw error;
       }
 
       if (isAbortError(error)) {

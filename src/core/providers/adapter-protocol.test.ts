@@ -5,6 +5,7 @@ import { AppError } from '../../shared/errors/index.ts';
 import {
   effectiveOutputTokens,
   joinProviderUrl,
+  MAX_PROVIDER_RESPONSE_BYTES,
   mergeProviderHeaders,
   readChatText,
   readJsonResponse
@@ -80,6 +81,15 @@ describe('adapter protocol helpers', () => {
       headers: { 'content-length': '1000001' },
       status: 200
     });
+
+    await expect(readJsonResponse(response)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
+  it('counts streamed UTF-8 bytes instead of JavaScript characters', async () => {
+    const multibytePayload = JSON.stringify({
+      text: 'é'.repeat(Math.floor(MAX_PROVIDER_RESPONSE_BYTES / 2) + 1)
+    });
+    const response = new Response(multibytePayload, { status: 200 });
 
     await expect(readJsonResponse(response)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
