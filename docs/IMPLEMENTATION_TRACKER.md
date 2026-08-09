@@ -135,13 +135,13 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 ## Phase 10 — One behavior setting and three safe shortcut bindings
 
 [x] Record the approved scope, migration, and acceptance criteria in the working plan.
-[ ] Bump and migrate the settings format without resetting existing user preferences.
-[ ] Make Behavior the only editable replace/preview decision.
-[ ] Remove per-control outcome fields from the settings schema, defaults, snapshots, UI, and runtime.
-[ ] Support one to three unique keyboard bindings for the same transform action.
-[ ] Preserve trusted-event, IME, AltGraph, repeat-event, and browser-conflict safeguards.
-[ ] Add migration, validation, settings, content, and shortcut regression coverage.
-[ ] Review and commit the coherent phase.
+[x] Bump and migrate the settings format without resetting existing user preferences.
+[x] Make Behavior the only editable replace/preview decision.
+[x] Remove per-control outcome fields from the settings schema, defaults, snapshots, UI, and runtime.
+[x] Support one to three unique keyboard bindings for the same transform action.
+[x] Preserve trusted-event, IME, AltGraph, repeat-event, and browser-conflict safeguards.
+[x] Add migration, validation, settings, content, and shortcut regression coverage.
+[x] Review and commit the coherent phase.
 
 ## Phase 11 — Friendly provider quick-start and reliable connectivity checks
 

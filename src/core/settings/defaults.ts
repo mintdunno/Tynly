@@ -20,24 +20,23 @@ export function createDefaultAppSettings(): AppSettings {
     controls: {
       shortcut: {
         enabled: true,
-        shortcut: {
-          code: 'KeyA',
-          alt: true,
-          ctrl: false,
-          meta: false,
-          shift: false
-        }
+        shortcuts: [
+          {
+            code: 'KeyA',
+            alt: true,
+            ctrl: false,
+            meta: false,
+            shift: false
+          }
+        ]
       },
       fieldButton: {
         enabled: true,
         position: 'bottom-right',
-        appearance: 'tynly-icon',
-        clickBehavior: 'transform-immediately'
+        appearance: 'tynly-icon'
       },
       selection: {
-        enabled: true,
-        editableBehavior: 'replace',
-        pageBehavior: 'show-result'
+        enabled: true
       }
     },
     styles: {

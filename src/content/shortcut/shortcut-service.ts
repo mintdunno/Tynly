@@ -85,12 +85,13 @@ function isTrustedUserEvent(event: Event): boolean {
 }
 
 function matchesShortcut(event: KeyboardEvent, settings: ShortcutSettings): boolean {
-  const shortcut = settings.shortcut;
-  return (
-    event.code === shortcut.code &&
-    event.altKey === shortcut.alt &&
-    event.ctrlKey === shortcut.ctrl &&
-    event.metaKey === shortcut.meta &&
-    event.shiftKey === shortcut.shift
+  return settings.shortcuts.some(
+    (shortcut) =>
+      (shortcut.alt || shortcut.ctrl || shortcut.meta) &&
+      event.code === shortcut.code &&
+      event.altKey === shortcut.alt &&
+      event.ctrlKey === shortcut.ctrl &&
+      event.metaKey === shortcut.meta &&
+      event.shiftKey === shortcut.shift
   );
 }

@@ -45,9 +45,9 @@ describe('ContentBootstrap', () => {
     bootstrap.stop();
   });
 
-  it('shows a preview before replacing and keeps normal page selection read-only', async () => {
+  it('uses the shared Behavior preview for field transforms and keeps page selection read-only', async () => {
     const settings = defaultSettings();
-    settings.controls.fieldButton.clickBehavior = 'show-preview';
+    settings.behavior.afterTransform = 'preview';
     const input = document.createElement('input');
     input.value = 'before';
     mockRect(input);
@@ -76,6 +76,33 @@ describe('ContentBootstrap', () => {
 
     expect(paragraph.textContent).toBe('Normal selection');
     expect(host.shadowRoot?.querySelector('.panel-output')?.textContent).toBe('after');
+    bootstrap.stop();
+  });
+
+  it('uses the shared Behavior preview for editable selection transforms', async () => {
+    const settings = defaultSettings();
+    settings.behavior.afterTransform = 'preview';
+    settings.controls.fieldButton.enabled = false;
+    const input = document.createElement('input');
+    input.value = 'before';
+    mockRect(input);
+    document.body.append(input);
+    const client = new BootstrapClient(settings, { kind: 'result', text: 'after' });
+    const bootstrap = new ContentBootstrap(document, client, createTestUiHost());
+
+    await bootstrap.start();
+    input.focus();
+    input.setSelectionRange(0, input.value.length);
+    document.dispatchEvent(new Event('selectionchange'));
+    await settle();
+    const host = getHost();
+    click(host.shadowRoot?.querySelector('[data-tynly-control="selection"]'));
+    await settle();
+
+    expect(client.requests).toMatchObject([{ text: 'before', trigger: 'selection-button' }]);
+    expect(input.value).toBe('before');
+    clickNamed(host.shadowRoot?.querySelector('.panel'), 'Replace');
+    expect(input.value).toBe('after');
     bootstrap.stop();
   });
 

@@ -9,9 +9,14 @@ afterEach(() => {
 });
 
 describe('ShortcutService', () => {
-  it('handles the configured shortcut only when its callback claims the event', () => {
+  it('handles each configured binding only when its callback claims the event', () => {
     let calls = 0;
     const settings = createDefaultAppSettings().controls.shortcut;
+    settings.shortcuts = [
+      { alt: true, code: 'KeyA', ctrl: false, meta: false, shift: false },
+      { alt: false, code: 'KeyT', ctrl: true, meta: false, shift: false },
+      { alt: false, code: 'KeyK', ctrl: false, meta: true, shift: false }
+    ];
     const service = new ShortcutService(
       document,
       () => settings,
@@ -23,16 +28,32 @@ describe('ShortcutService', () => {
     );
     service.start();
 
-    const event = new KeyboardEvent('keydown', {
+    const first = new KeyboardEvent('keydown', {
       altKey: true,
       bubbles: true,
       cancelable: true,
       code: 'KeyA'
     });
-    document.dispatchEvent(event);
+    const second = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      code: 'KeyT',
+      ctrlKey: true
+    });
+    const third = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      code: 'KeyK',
+      metaKey: true
+    });
+    document.dispatchEvent(first);
+    document.dispatchEvent(second);
+    document.dispatchEvent(third);
 
-    expect(calls).toBe(1);
-    expect(event.defaultPrevented).toBe(true);
+    expect(calls).toBe(3);
+    expect(first.defaultPrevented).toBe(true);
+    expect(second.defaultPrevented).toBe(true);
+    expect(third.defaultPrevented).toBe(true);
     service.stop();
   });
 
@@ -65,6 +86,44 @@ describe('ShortcutService', () => {
     );
 
     expect(calls).toBe(0);
+    service.stop();
+  });
+
+  it('does not claim bare or shift-only keys if unsafe settings bypass validation', () => {
+    let calls = 0;
+    const settings = createDefaultAppSettings().controls.shortcut;
+    settings.shortcuts = [
+      { alt: false, code: 'KeyT', ctrl: false, meta: false, shift: false },
+      { alt: false, code: 'KeyY', ctrl: false, meta: false, shift: true }
+    ];
+    const service = new ShortcutService(
+      document,
+      () => settings,
+      () => {
+        calls += 1;
+        return true;
+      },
+      { isTrustedEvent: () => true }
+    );
+    service.start();
+
+    const bare = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      code: 'KeyT'
+    });
+    const shiftOnly = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      code: 'KeyY',
+      shiftKey: true
+    });
+    document.dispatchEvent(bare);
+    document.dispatchEvent(shiftOnly);
+
+    expect(calls).toBe(0);
+    expect(bare.defaultPrevented).toBe(false);
+    expect(shiftOnly.defaultPrevented).toBe(false);
     service.stop();
   });
 

@@ -6,7 +6,7 @@ import type { AppSettings } from '../../core/settings/schema.ts';
 import { serializeAppError } from '../../shared/errors/index.ts';
 import { PRODUCT } from '../../shared/product.ts';
 import {
-  formatShortcut,
+  formatShortcutBindings,
   getActiveProvider,
   getSourceLanguageOptions,
   getStyleOptions,
@@ -185,8 +185,8 @@ function PopupApp() {
       <footer className="popup-footer">
         <span className="shortcut-hint">
           {settings.controls.shortcut.enabled
-            ? formatShortcut(settings.controls.shortcut.shortcut)
-            : 'Shortcut off'}
+            ? formatShortcutBindings(settings.controls.shortcut.shortcuts)
+            : 'Shortcuts off'}
         </span>
         <button className="text-button" onClick={openSettings} type="button">
           Settings

@@ -10,7 +10,9 @@ import { ProviderEditor } from './provider-editor.tsx';
 import { applyProviderDraft, type ProviderDraft } from './provider-draft.ts';
 import { ProviderOperationClient } from './provider-operation-client.ts';
 import {
+  MAX_SHORTCUT_BINDINGS,
   PROVIDER_KIND_LABELS,
+  addShortcutBinding,
   createProviderProfile,
   createSettingsIdentifier,
   formatShortcut,
@@ -18,6 +20,8 @@ import {
   getStyleOptions,
   getTargetLanguageOptions,
   parseStyleSelection,
+  removeShortcutBinding,
+  replaceShortcutBinding,
   shortcutFromKeyboardEvent,
   styleSelectionValue,
   swapLanguages,
@@ -29,6 +33,8 @@ import '../extension-page.css';
 const settingsStore = new SettingsStore();
 const providerOperations = new ProviderOperationClient();
 
+type ShortcutRecordingTarget = number | 'new' | null;
+
 function SettingsApp() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +45,7 @@ function SettingsApp() {
     Readonly<Record<string, readonly ProviderModelInfo[]>>
   >({});
   const [newProviderKind, setNewProviderKind] = useState<ProviderKind>('openai');
+  const [recordingShortcut, setRecordingShortcut] = useState<ShortcutRecordingTarget>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -255,6 +262,75 @@ function SettingsApp() {
     return next !== null;
   };
 
+  const recordKeyboardShortcut = (
+    event: KeyboardEvent,
+    target: Exclude<ShortcutRecordingTarget, null>
+  ): void => {
+    const shortcut = shortcutFromKeyboardEvent(event);
+    if (shortcut === null) {
+      return;
+    }
+    event.preventDefault();
+
+    const currentBindings = settings.controls.shortcut.shortcuts;
+    const nextBindings =
+      target === 'new'
+        ? addShortcutBinding(currentBindings, shortcut)
+        : replaceShortcutBinding(currentBindings, target, shortcut);
+    if (nextBindings === null) {
+      setError(
+        target === 'new' && currentBindings.length >= MAX_SHORTCUT_BINDINGS
+          ? `You can save up to ${MAX_SHORTCUT_BINDINGS} keyboard shortcuts.`
+          : 'That keyboard shortcut is already in use. Choose a different combination.'
+      );
+      return;
+    }
+
+    setRecordingShortcut(null);
+    void persist((current) => {
+      const bindings = current.controls.shortcut.shortcuts;
+      const updated =
+        target === 'new'
+          ? addShortcutBinding(bindings, shortcut)
+          : replaceShortcutBinding(bindings, target, shortcut);
+      if (updated === null) {
+        return current;
+      }
+      return {
+        ...current,
+        controls: {
+          ...current.controls,
+          shortcut: { ...current.controls.shortcut, shortcuts: updated }
+        }
+      };
+    });
+  };
+
+  const removeKeyboardShortcut = (index: number): void => {
+    if (removeShortcutBinding(settings.controls.shortcut.shortcuts, index) === null) {
+      return;
+    }
+    setRecordingShortcut((target) => {
+      if (target === 'new' || target === null || target < index) {
+        return target;
+      }
+      return target === index ? null : target - 1;
+    });
+    void persist((current) => {
+      const shortcuts = removeShortcutBinding(current.controls.shortcut.shortcuts, index);
+      if (shortcuts === null) {
+        return current;
+      }
+      return {
+        ...current,
+        controls: {
+          ...current.controls,
+          shortcut: { ...current.controls.shortcut, shortcuts }
+        }
+      };
+    });
+  };
+
   return (
     <main className="settings-shell" aria-label="Tynly settings">
       <header className="settings-header">
@@ -432,28 +508,104 @@ function SettingsApp() {
             />
             Enable keyboard shortcut
           </label>
-          <button
-            aria-label="Record keyboard shortcut"
-            className="secondary-button"
-            disabled={saving}
-            onKeyDown={(event) => {
-              const shortcut = shortcutFromKeyboardEvent(event);
-              if (shortcut === null) {
-                return;
-              }
-              event.preventDefault();
-              void persist((current) => ({
-                ...current,
-                controls: {
-                  ...current.controls,
-                  shortcut: { ...current.controls.shortcut, shortcut }
-                }
-              }));
-            }}
-            type="button"
+          <p className="muted" id="keyboard-shortcut-help">
+            Save up to {MAX_SHORTCUT_BINDINGS} shortcuts. Each shortcut must include Alt, Ctrl, or
+            Cmd.
+          </p>
+          <div
+            aria-describedby="keyboard-shortcut-help"
+            aria-label="Keyboard shortcut bindings"
+            className="shortcut-bindings"
+            role="list"
           >
-            {formatShortcut(settings.controls.shortcut.shortcut)} · press a new shortcut
-          </button>
+            {settings.controls.shortcut.shortcuts.map((shortcut, index) => {
+              const isRecording = recordingShortcut === index;
+              const formattedShortcut = formatShortcut(shortcut);
+              return (
+                <div className="shortcut-binding" key={formattedShortcut} role="listitem">
+                  <span className="shortcut-binding-name">Shortcut {index + 1}</span>
+                  <kbd className="shortcut-binding-value">{formattedShortcut}</kbd>
+                  <button
+                    aria-label={
+                      isRecording
+                        ? `Record keyboard shortcut ${index + 1}`
+                        : `Change keyboard shortcut ${index + 1}, currently ${formattedShortcut}`
+                    }
+                    aria-pressed={isRecording}
+                    className="secondary-button"
+                    disabled={saving}
+                    onClick={() => {
+                      setError(null);
+                      setRecordingShortcut((target) => (target === index ? null : index));
+                    }}
+                    onKeyDown={(event) => {
+                      if (isRecording) {
+                        if (event.code === 'Escape') {
+                          event.preventDefault();
+                          setRecordingShortcut(null);
+                          return;
+                        }
+                        recordKeyboardShortcut(event, index);
+                      }
+                    }}
+                    type="button"
+                  >
+                    {isRecording ? 'Press a key combination' : 'Change'}
+                  </button>
+                  <button
+                    aria-label={`Remove keyboard shortcut ${index + 1}`}
+                    className="danger-button"
+                    disabled={saving || settings.controls.shortcut.shortcuts.length === 1}
+                    onClick={() => removeKeyboardShortcut(index)}
+                    title={
+                      settings.controls.shortcut.shortcuts.length === 1
+                        ? 'At least one keyboard shortcut is required.'
+                        : undefined
+                    }
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {settings.controls.shortcut.shortcuts.length < MAX_SHORTCUT_BINDINGS ? (
+            <button
+              aria-label={
+                recordingShortcut === 'new'
+                  ? 'Record new keyboard shortcut'
+                  : 'Add keyboard shortcut'
+              }
+              aria-pressed={recordingShortcut === 'new'}
+              className="secondary-button"
+              disabled={saving}
+              onClick={() => {
+                setError(null);
+                setRecordingShortcut((target) => (target === 'new' ? null : 'new'));
+              }}
+              onKeyDown={(event) => {
+                if (recordingShortcut === 'new') {
+                  if (event.code === 'Escape') {
+                    event.preventDefault();
+                    setRecordingShortcut(null);
+                    return;
+                  }
+                  recordKeyboardShortcut(event, 'new');
+                }
+              }}
+              type="button"
+            >
+              {recordingShortcut === 'new' ? 'Press a key combination' : 'Add keyboard shortcut'}
+            </button>
+          ) : null}
+          <p aria-live="polite" className="sr-only">
+            {recordingShortcut === null
+              ? ''
+              : recordingShortcut === 'new'
+                ? 'Recording a new keyboard shortcut. Press Alt, Ctrl, or Cmd with another key, or Escape to cancel.'
+                : `Recording keyboard shortcut ${recordingShortcut + 1}. Press Alt, Ctrl, or Cmd with another key, or Escape to cancel.`}
+          </p>
         </div>
         <div className="control-group form-grid">
           <label className="toggle-row">
@@ -518,27 +670,6 @@ function SettingsApp() {
               <option value="monochrome-icon">Monochrome icon</option>
             </select>
           </label>
-          <label>
-            <span>Field-button click</span>
-            <select
-              disabled={saving}
-              onChange={(event) => {
-                const clickBehavior = (event.currentTarget as HTMLSelectElement)
-                  .value as AppSettings['controls']['fieldButton']['clickBehavior'];
-                void persist((current) => ({
-                  ...current,
-                  controls: {
-                    ...current.controls,
-                    fieldButton: { ...current.controls.fieldButton, clickBehavior }
-                  }
-                }));
-              }}
-              value={settings.controls.fieldButton.clickBehavior}
-            >
-              <option value="transform-immediately">Transform immediately</option>
-              <option value="show-preview">Show preview</option>
-            </select>
-          </label>
         </div>
         <div className="control-group form-grid">
           <label className="toggle-row">
@@ -558,27 +689,6 @@ function SettingsApp() {
               type="checkbox"
             />
             Show a button on text selection
-          </label>
-          <label>
-            <span>Editable selection</span>
-            <select
-              disabled={saving}
-              onChange={(event) => {
-                const editableBehavior = (event.currentTarget as HTMLSelectElement)
-                  .value as AppSettings['controls']['selection']['editableBehavior'];
-                void persist((current) => ({
-                  ...current,
-                  controls: {
-                    ...current.controls,
-                    selection: { ...current.controls.selection, editableBehavior }
-                  }
-                }));
-              }}
-              value={settings.controls.selection.editableBehavior}
-            >
-              <option value="replace">Replace automatically</option>
-              <option value="preview">Show preview</option>
-            </select>
           </label>
           <p className="muted">
             Normal webpage selections always show a copyable result and never change the page.

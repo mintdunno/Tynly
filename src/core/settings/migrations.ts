@@ -1,6 +1,7 @@
 import { createDefaultAppSettings } from './defaults.ts';
 import {
   CURRENT_SETTINGS_VERSION,
+  MAX_SHORTCUT_COUNT,
   MAX_CUSTOM_STYLE_COUNT,
   isAppSettings,
   isBehaviorSettings,
@@ -123,7 +124,7 @@ export function cloneAppSettings(settings: AppSettings): AppSettings {
     controls: {
       shortcut: {
         enabled: settings.controls.shortcut.enabled,
-        shortcut: { ...settings.controls.shortcut.shortcut }
+        shortcuts: settings.controls.shortcut.shortcuts.map((shortcut) => ({ ...shortcut }))
       },
       fieldButton: { ...settings.controls.fieldButton },
       selection: { ...settings.controls.selection }
@@ -226,22 +227,24 @@ function migrateShortcutSettings(
   if (isShortcutSettings(nested)) {
     return {
       enabled: nested.enabled,
-      shortcut: { ...nested.shortcut }
+      shortcuts: nested.shortcuts.map((shortcut) => ({ ...shortcut }))
     };
   }
 
   const migrated: ShortcutSettings = {
     enabled: defaults.enabled,
-    shortcut: { ...defaults.shortcut }
+    shortcuts: defaults.shortcuts.map((shortcut) => ({ ...shortcut }))
   };
   const enabled = firstDefined(nested?.enabled, controls?.shortcutEnabled, source.shortcutEnabled);
   if (typeof enabled === 'boolean') {
     migrated.enabled = enabled;
   }
 
-  const shortcut = toKeyboardShortcut(firstDefined(nested?.shortcut, source.shortcut));
-  if (shortcut) {
-    migrated.shortcut = shortcut;
+  const shortcuts = collectKeyboardShortcuts(
+    firstDefined(nested?.shortcuts, nested?.shortcut, source.shortcuts, source.shortcut)
+  );
+  if (shortcuts.length > 0) {
+    migrated.shortcuts = shortcuts;
   }
 
   return migrated;
@@ -279,11 +282,6 @@ function migrateFieldButtonSettings(
   if (appearance === 'tynly-icon' || appearance === 'monochrome-icon') {
     migrated.appearance = appearance;
   }
-  const clickBehavior = firstDefined(nested?.clickBehavior, source.fieldButtonClickBehavior);
-  if (clickBehavior === 'transform-immediately' || clickBehavior === 'show-preview') {
-    migrated.clickBehavior = clickBehavior;
-  }
-
   return migrated;
 }
 
@@ -306,14 +304,6 @@ function migrateSelectionSettings(
   if (typeof enabled === 'boolean') {
     migrated.enabled = enabled;
   }
-  const editableBehavior = firstDefined(nested?.editableBehavior, source.editableSelectionBehavior);
-  if (editableBehavior === 'replace' || editableBehavior === 'preview') {
-    migrated.editableBehavior = editableBehavior;
-  }
-  if (firstDefined(nested?.pageBehavior, source.pageSelectionBehavior) === 'show-result') {
-    migrated.pageBehavior = 'show-result';
-  }
-
   return migrated;
 }
 
@@ -423,6 +413,33 @@ function normalizeLanguageToken(value: unknown): string | undefined {
   return aliases[normalized] ?? normalized;
 }
 
+function collectKeyboardShortcuts(value: unknown): KeyboardShortcut[] {
+  const candidates = Array.isArray(value) ? value : [value];
+  const shortcutKeys = new Set<string>();
+  const shortcuts: KeyboardShortcut[] = [];
+
+  for (const candidate of candidates) {
+    if (shortcuts.length >= MAX_SHORTCUT_COUNT) {
+      break;
+    }
+
+    const shortcut = toKeyboardShortcut(candidate);
+    if (!shortcut) {
+      continue;
+    }
+
+    const key = toKeyboardShortcutKey(shortcut);
+    if (shortcutKeys.has(key)) {
+      continue;
+    }
+
+    shortcutKeys.add(key);
+    shortcuts.push(shortcut);
+  }
+
+  return shortcuts;
+}
+
 function toKeyboardShortcut(value: unknown): KeyboardShortcut | undefined {
   if (isKeyboardShortcut(value)) {
     return { ...value };
@@ -448,13 +465,25 @@ function toKeyboardShortcut(value: unknown): KeyboardShortcut | undefined {
     return undefined;
   }
 
-  return {
+  const shortcut: KeyboardShortcut = {
     code,
     alt: modifiers.has('alt'),
     ctrl: modifiers.has('ctrl') || modifiers.has('control'),
     meta: modifiers.has('meta') || modifiers.has('cmd'),
     shift: modifiers.has('shift')
   };
+
+  return shortcut.alt || shortcut.ctrl || shortcut.meta ? shortcut : undefined;
+}
+
+function toKeyboardShortcutKey(shortcut: KeyboardShortcut): string {
+  return JSON.stringify([
+    shortcut.code,
+    shortcut.alt,
+    shortcut.ctrl,
+    shortcut.meta,
+    shortcut.shift
+  ]);
 }
 
 function toKeyboardCode(value: string): string | undefined {
@@ -492,7 +521,7 @@ function cloneControlsSettings(settings: ControlsSettings): ControlsSettings {
   return {
     shortcut: {
       enabled: settings.shortcut.enabled,
-      shortcut: { ...settings.shortcut.shortcut }
+      shortcuts: settings.shortcut.shortcuts.map((shortcut) => ({ ...shortcut }))
     },
     fieldButton: { ...settings.fieldButton },
     selection: { ...settings.selection }

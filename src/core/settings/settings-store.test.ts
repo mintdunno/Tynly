@@ -47,13 +47,13 @@ describe('SettingsStore', () => {
     const store = new SettingsStore(storage);
 
     await expect(store.initialize()).resolves.toMatchObject({
-      version: 1,
+      version: 2,
       language: { source: 'vi', target: 'en' }
     });
 
     expect(storage.restricted).toBe(true);
     expect(storage.values.get(SETTINGS_STORAGE_KEY)).toMatchObject({
-      version: 1
+      version: 2
     });
   });
 
@@ -107,7 +107,7 @@ describe('SettingsStore', () => {
     await store.replace(createDefaultAppSettings());
 
     expect(storage.restricted).toBe(true);
-    expect(storage.values.get(SETTINGS_STORAGE_KEY)).toMatchObject({ version: 1 });
+    expect(storage.values.get(SETTINGS_STORAGE_KEY)).toMatchObject({ version: 2 });
   });
 
   it('serializes concurrent updates so one change cannot overwrite another', async () => {

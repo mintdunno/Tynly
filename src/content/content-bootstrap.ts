@@ -126,12 +126,10 @@ export class ContentBootstrap {
     this.ui.showFieldButton({
       appearance: settings.controls.fieldButton.appearance,
       onActivate: () => {
-        const mode =
-          settings.controls.fieldButton.clickBehavior === 'show-preview' ? 'preview' : 'replace';
         this.controller?.startEditable(
           target.target,
           'field-button',
-          mode,
+          settings.behavior.afterTransform,
           settings.behavior.showUndoNotification
         );
       },
@@ -152,14 +150,10 @@ export class ContentBootstrap {
     if (selection.kind === 'page') {
       return controller.startPageSelection(selection.text, trigger, selection.anchor);
     }
-    const mode =
-      trigger === 'selection-button'
-        ? settings.controls.selection.editableBehavior
-        : settings.behavior.afterTransform;
     return controller.startEditable(
       selection.target.target,
       trigger,
-      mode,
+      settings.behavior.afterTransform,
       settings.behavior.showUndoNotification
     );
   }

@@ -4,11 +4,16 @@ import { createDefaultAppSettings } from '../../core/settings/defaults.ts';
 
 import {
   PROVIDER_CAPABILITIES,
+  MAX_SHORTCUT_BINDINGS,
+  addShortcutBinding,
   createProviderProfile,
   createSettingsIdentifier,
   formatShortcut,
+  formatShortcutBindings,
   getActiveProvider,
   parseStyleSelection,
+  removeShortcutBinding,
+  replaceShortcutBinding,
   shortcutFromKeyboardEvent,
   styleSelectionValue,
   swapLanguages,
@@ -67,7 +72,7 @@ describe('settings UI utilities', () => {
     expect(PROVIDER_CAPABILITIES.ollama.customHeaders).toBe(true);
   });
 
-  it('creates bounded identifiers and ignores modifier-only shortcut recordings', () => {
+  it('creates bounded identifiers and records only safe keyboard shortcuts', () => {
     expect(createSettingsIdentifier('profile', () => 'abc-123')).toBe('profile-abc-123');
     expect(() => createSettingsIdentifier('style', () => 'contains spaces')).toThrow();
 
@@ -75,8 +80,32 @@ describe('settings UI utilities', () => {
       shortcutFromKeyboardEvent(new KeyboardEvent('keydown', { altKey: true, code: 'KeyA' }))
     ).toEqual({ alt: true, code: 'KeyA', ctrl: false, meta: false, shift: false });
     expect(shortcutFromKeyboardEvent(new KeyboardEvent('keydown', { code: 'AltLeft' }))).toBeNull();
+    expect(shortcutFromKeyboardEvent(new KeyboardEvent('keydown', { code: 'KeyA' }))).toBeNull();
+    expect(
+      shortcutFromKeyboardEvent(new KeyboardEvent('keydown', { code: 'KeyA', shiftKey: true }))
+    ).toBeNull();
     expect(formatShortcut({ alt: false, code: 'KeyK', ctrl: true, meta: false, shift: true })).toBe(
       'Ctrl + Shift + K'
+    );
+  });
+
+  it('keeps shortcut bindings unique, bounded, and non-empty', () => {
+    const first = { alt: true, code: 'KeyA', ctrl: false, meta: false, shift: false };
+    const second = { alt: false, code: 'KeyK', ctrl: true, meta: false, shift: false };
+    const third = { alt: false, code: 'KeyP', ctrl: true, meta: false, shift: true };
+    const fourth = { alt: false, code: 'KeyT', ctrl: false, meta: true, shift: false };
+
+    expect(addShortcutBinding([first], first)).toBeNull();
+    expect(addShortcutBinding([first], second)).toEqual([first, second]);
+    expect(addShortcutBinding([first, second, third], fourth)).toBeNull();
+    expect(MAX_SHORTCUT_BINDINGS).toBe(3);
+
+    expect(replaceShortcutBinding([first, second], 1, first)).toBeNull();
+    expect(replaceShortcutBinding([first, second], 1, third)).toEqual([first, third]);
+    expect(removeShortcutBinding([first], 0)).toBeNull();
+    expect(removeShortcutBinding([first, second], 0)).toEqual([second]);
+    expect(formatShortcutBindings([first, second, third])).toBe(
+      'Alt + A · Ctrl + K · Ctrl + Shift + P'
     );
   });
 });

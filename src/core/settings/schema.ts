@@ -10,7 +10,7 @@ import {
   parseCustomJsonResponsePath
 } from './custom-json-validation.ts';
 
-export const CURRENT_SETTINGS_VERSION = 1 as const;
+export const CURRENT_SETTINGS_VERSION = 2 as const;
 
 export const SUPPORTED_LANGUAGE_CODES = ['vi', 'en', 'ja', 'ko', 'zh', 'fr', 'de', 'es'] as const;
 
@@ -40,6 +40,8 @@ export const FIELD_BUTTON_POSITIONS = [
 ] as const;
 
 export const HTTP_METHODS = ['POST', 'PUT', 'PATCH'] as const;
+export const MIN_SHORTCUT_COUNT = 1;
+export const MAX_SHORTCUT_COUNT = 3;
 
 export type SettingsVersion = typeof CURRENT_SETTINGS_VERSION;
 export type LanguageCode = (typeof SUPPORTED_LANGUAGE_CODES)[number];
@@ -71,20 +73,17 @@ export interface KeyboardShortcut {
 
 export interface ShortcutSettings {
   enabled: boolean;
-  shortcut: KeyboardShortcut;
+  shortcuts: KeyboardShortcut[];
 }
 
 export interface FieldButtonSettings {
   enabled: boolean;
   position: FieldButtonPosition;
   appearance: 'tynly-icon' | 'monochrome-icon';
-  clickBehavior: 'transform-immediately' | 'show-preview';
 }
 
 export interface SelectionSettings {
   enabled: boolean;
-  editableBehavior: 'replace' | 'preview';
-  pageBehavior: 'show-result';
 }
 
 export interface ControlsSettings {
@@ -270,14 +269,9 @@ const APP_SETTINGS_FIELDS = [
 const LANGUAGE_SETTINGS_FIELDS = ['source', 'target'] as const;
 const BEHAVIOR_SETTINGS_FIELDS = ['afterTransform', 'showUndoNotification'] as const;
 const KEYBOARD_SHORTCUT_FIELDS = ['code', 'alt', 'ctrl', 'meta', 'shift'] as const;
-const SHORTCUT_SETTINGS_FIELDS = ['enabled', 'shortcut'] as const;
-const FIELD_BUTTON_SETTINGS_FIELDS = [
-  'enabled',
-  'position',
-  'appearance',
-  'clickBehavior'
-] as const;
-const SELECTION_SETTINGS_FIELDS = ['enabled', 'editableBehavior', 'pageBehavior'] as const;
+const SHORTCUT_SETTINGS_FIELDS = ['enabled', 'shortcuts'] as const;
+const FIELD_BUTTON_SETTINGS_FIELDS = ['enabled', 'position', 'appearance'] as const;
+const SELECTION_SETTINGS_FIELDS = ['enabled'] as const;
 const CONTROLS_SETTINGS_FIELDS = ['shortcut', 'fieldButton', 'selection'] as const;
 const CUSTOM_STYLE_FIELDS = ['id', 'name', 'instruction'] as const;
 const CONTENT_CUSTOM_STYLE_FIELDS = ['id', 'name'] as const;
@@ -478,24 +472,15 @@ export function toContentSettingsSnapshot(settings: AppSettings): ContentSetting
     controls: {
       shortcut: {
         enabled: settings.controls.shortcut.enabled,
-        shortcut: {
-          code: settings.controls.shortcut.shortcut.code,
-          alt: settings.controls.shortcut.shortcut.alt,
-          ctrl: settings.controls.shortcut.shortcut.ctrl,
-          meta: settings.controls.shortcut.shortcut.meta,
-          shift: settings.controls.shortcut.shortcut.shift
-        }
+        shortcuts: settings.controls.shortcut.shortcuts.map((shortcut) => ({ ...shortcut }))
       },
       fieldButton: {
         enabled: settings.controls.fieldButton.enabled,
         position: settings.controls.fieldButton.position,
-        appearance: settings.controls.fieldButton.appearance,
-        clickBehavior: settings.controls.fieldButton.clickBehavior
+        appearance: settings.controls.fieldButton.appearance
       },
       selection: {
-        enabled: settings.controls.selection.enabled,
-        editableBehavior: settings.controls.selection.editableBehavior,
-        pageBehavior: settings.controls.selection.pageBehavior
+        enabled: settings.controls.selection.enabled
       }
     },
     styles: {
@@ -692,24 +677,66 @@ export function isStyleSelection(value: unknown): value is StyleSelection {
 }
 
 export function isShortcutSettings(value: unknown): value is ShortcutSettings {
-  return (
-    isRecord(value) &&
-    hasExactOwnDataFields(value, SHORTCUT_SETTINGS_FIELDS) &&
-    typeof getOwnDataValue(value, 'enabled') === 'boolean' &&
-    isKeyboardShortcut(getOwnDataValue(value, 'shortcut'))
-  );
+  if (
+    !isRecord(value) ||
+    !hasExactOwnDataFields(value, SHORTCUT_SETTINGS_FIELDS) ||
+    typeof getOwnDataValue(value, 'enabled') !== 'boolean'
+  ) {
+    return false;
+  }
+
+  const shortcuts = getOwnDataValue(value, 'shortcuts');
+  if (
+    !Array.isArray(shortcuts) ||
+    shortcuts.length < MIN_SHORTCUT_COUNT ||
+    shortcuts.length > MAX_SHORTCUT_COUNT
+  ) {
+    return false;
+  }
+
+  const shortcutKeys = new Set<string>();
+  for (const shortcut of shortcuts) {
+    if (!isKeyboardShortcut(shortcut)) {
+      return false;
+    }
+
+    const key = toKeyboardShortcutKey(shortcut);
+    if (shortcutKeys.has(key)) {
+      return false;
+    }
+    shortcutKeys.add(key);
+  }
+
+  return true;
 }
 
 export function isKeyboardShortcut(value: unknown): value is KeyboardShortcut {
+  if (!isRecord(value) || !hasExactOwnDataFields(value, KEYBOARD_SHORTCUT_FIELDS)) {
+    return false;
+  }
+
+  const alt = getOwnDataValue(value, 'alt');
+  const ctrl = getOwnDataValue(value, 'ctrl');
+  const meta = getOwnDataValue(value, 'meta');
+
   return (
-    isRecord(value) &&
-    hasExactOwnDataFields(value, KEYBOARD_SHORTCUT_FIELDS) &&
     isNonBlankSingleLineText(getOwnDataValue(value, 'code'), 64) &&
-    typeof getOwnDataValue(value, 'alt') === 'boolean' &&
-    typeof getOwnDataValue(value, 'ctrl') === 'boolean' &&
-    typeof getOwnDataValue(value, 'meta') === 'boolean' &&
-    typeof getOwnDataValue(value, 'shift') === 'boolean'
+    typeof alt === 'boolean' &&
+    typeof ctrl === 'boolean' &&
+    typeof meta === 'boolean' &&
+    typeof getOwnDataValue(value, 'shift') === 'boolean' &&
+    (alt || ctrl || meta)
   );
+}
+
+function toKeyboardShortcutKey(shortcut: KeyboardShortcut): string {
+  return JSON.stringify([
+    shortcut.code,
+    shortcut.alt,
+    shortcut.ctrl,
+    shortcut.meta,
+    shortcut.shift
+  ]);
 }
 
 export function isFieldButtonSettings(value: unknown): value is FieldButtonSettings {
@@ -719,9 +746,7 @@ export function isFieldButtonSettings(value: unknown): value is FieldButtonSetti
     typeof getOwnDataValue(value, 'enabled') === 'boolean' &&
     isOneOf(getOwnDataValue(value, 'position'), FIELD_BUTTON_POSITIONS) &&
     (getOwnDataValue(value, 'appearance') === 'tynly-icon' ||
-      getOwnDataValue(value, 'appearance') === 'monochrome-icon') &&
-    (getOwnDataValue(value, 'clickBehavior') === 'transform-immediately' ||
-      getOwnDataValue(value, 'clickBehavior') === 'show-preview')
+      getOwnDataValue(value, 'appearance') === 'monochrome-icon')
   );
 }
 
@@ -729,10 +754,7 @@ export function isSelectionSettings(value: unknown): value is SelectionSettings 
   return (
     isRecord(value) &&
     hasExactOwnDataFields(value, SELECTION_SETTINGS_FIELDS) &&
-    typeof getOwnDataValue(value, 'enabled') === 'boolean' &&
-    (getOwnDataValue(value, 'editableBehavior') === 'replace' ||
-      getOwnDataValue(value, 'editableBehavior') === 'preview') &&
-    getOwnDataValue(value, 'pageBehavior') === 'show-result'
+    typeof getOwnDataValue(value, 'enabled') === 'boolean'
   );
 }
 

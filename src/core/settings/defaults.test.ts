@@ -8,24 +8,21 @@ describe('createDefaultAppSettings', () => {
     const settings = createDefaultAppSettings();
 
     expect(settings).toMatchObject({
-      version: 1,
+      version: 2,
       language: { source: 'vi', target: 'en' },
       behavior: { afterTransform: 'replace', showUndoNotification: true },
       controls: {
         shortcut: {
           enabled: true,
-          shortcut: { code: 'KeyA', alt: true, ctrl: false, meta: false, shift: false }
+          shortcuts: [{ code: 'KeyA', alt: true, ctrl: false, meta: false, shift: false }]
         },
         fieldButton: {
           enabled: true,
           position: 'bottom-right',
-          appearance: 'tynly-icon',
-          clickBehavior: 'transform-immediately'
+          appearance: 'tynly-icon'
         },
         selection: {
-          enabled: true,
-          editableBehavior: 'replace',
-          pageBehavior: 'show-result'
+          enabled: true
         }
       },
       styles: { selected: { kind: 'built-in', id: 'natural' }, custom: [] },
@@ -39,11 +36,11 @@ describe('createDefaultAppSettings', () => {
     const second = createDefaultAppSettings();
 
     first.language.source = 'en';
-    first.controls.shortcut.shortcut.alt = false;
+    first.controls.shortcut.shortcuts[0]!.alt = false;
     first.styles.custom.push({ id: 'brief', name: 'Brief', instruction: 'Keep it brief.' });
 
     expect(second.language.source).toBe('vi');
-    expect(second.controls.shortcut.shortcut.alt).toBe(true);
+    expect(second.controls.shortcut.shortcuts[0]?.alt).toBe(true);
     expect(second.styles.custom).toEqual([]);
   });
 });

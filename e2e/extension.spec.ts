@@ -17,6 +17,9 @@ test('configures a local provider and safely exercises all transform triggers', 
   await settings.getByRole('button', { name: 'Save provider' }).click();
   await expect(settings.getByText('Provider saved.').first()).toBeVisible();
 
+  await addKeyboardShortcut(settings, 'KeyK');
+  await expect(settings.getByText('Alt + K').first()).toBeVisible();
+
   await settings.getByRole('button', { name: 'Refresh models' }).click();
   await expect(settings.getByText('Loaded 1 model.').first()).toBeVisible();
   await settings.getByRole('button', { name: 'Test connection' }).click();
@@ -60,7 +63,7 @@ test('configures a local provider and safely exercises all transform triggers', 
   await expect(message).toHaveValue('A draft message.');
 
   await message.focus();
-  await pressDefaultShortcut(page);
+  await pressShortcut(page, 'KeyK');
   await expect(message).toHaveValue(MOCK_TRANSFORM_RESULT);
   await clickTynlyButton(page, 'Undo');
   await expect(message).toHaveValue('A draft message.');
@@ -99,8 +102,17 @@ async function clickTynlyButton(page: Page, name: string): Promise<void> {
 }
 
 async function pressDefaultShortcut(page: Page): Promise<void> {
+  await pressShortcut(page, 'KeyA');
+}
+
+async function addKeyboardShortcut(page: Page, code: string): Promise<void> {
+  await page.getByRole('button', { name: 'Add keyboard shortcut' }).click();
+  await pressShortcut(page, code);
+}
+
+async function pressShortcut(page: Page, code: string): Promise<void> {
   await page.keyboard.down('Alt');
-  await page.keyboard.press('KeyA');
+  await page.keyboard.press(code);
   await page.keyboard.up('Alt');
 }
 

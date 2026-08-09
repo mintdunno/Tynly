@@ -7,6 +7,7 @@ import {
   isHttpUrl,
   isOllamaUrl,
   isProviderProfile,
+  isShortcutSettings,
   toContentSettingsSnapshot,
   validateAppSettings
 } from './schema.ts';
@@ -130,9 +131,59 @@ describe('settings schema', () => {
     expect(Object.keys(snapshot.controls.fieldButton)).toEqual([
       'enabled',
       'position',
-      'appearance',
-      'clickBehavior'
+      'appearance'
     ]);
+    expect(Object.keys(snapshot.controls.selection)).toEqual(['enabled']);
+  });
+
+  it('requires one to three unique, safely modified shortcuts', () => {
+    const first = { code: 'KeyA', alt: true, ctrl: false, meta: false, shift: false };
+    const second = { code: 'KeyB', alt: false, ctrl: true, meta: false, shift: true };
+    const third = { code: 'KeyC', alt: false, ctrl: false, meta: true, shift: false };
+    const fourth = { code: 'KeyD', alt: true, ctrl: false, meta: false, shift: false };
+    const sparseShortcuts = new Array(1);
+
+    expect(isShortcutSettings({ enabled: true, shortcuts: [first] })).toBe(true);
+    expect(isShortcutSettings({ enabled: true, shortcuts: [] })).toBe(false);
+    expect(isShortcutSettings({ enabled: true, shortcuts: sparseShortcuts })).toBe(false);
+    expect(isShortcutSettings({ enabled: true, shortcuts: [first, first] })).toBe(false);
+    expect(isShortcutSettings({ enabled: true, shortcuts: [first, second, third, fourth] })).toBe(
+      false
+    );
+    expect(
+      isShortcutSettings({
+        enabled: true,
+        shortcuts: [{ code: 'KeyA', alt: false, ctrl: false, meta: false, shift: true }]
+      })
+    ).toBe(false);
+    expect(
+      isShortcutSettings({
+        enabled: true,
+        shortcut: first
+      })
+    ).toBe(false);
+    expect(
+      isShortcutSettings({
+        enabled: true,
+        shortcuts: [first],
+        unexpected: true
+      })
+    ).toBe(false);
+
+    const settings = createDefaultAppSettings();
+    const snapshot = toContentSettingsSnapshot(settings);
+    settings.controls.shortcut.shortcuts[0]!.alt = false;
+    settings.controls.shortcut.shortcuts.push({
+      code: 'KeyB',
+      alt: true,
+      ctrl: false,
+      meta: false,
+      shift: false
+    });
+
+    expect(snapshot.controls.shortcut.shortcuts[0]?.alt).toBe(true);
+    expect(snapshot.controls.shortcut.shortcuts).toHaveLength(1);
+    expect(isContentSettingsSnapshot(snapshot)).toBe(true);
   });
 
   it('requires safe provider URLs and permits local Ollama HTTP only', () => {

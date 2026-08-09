@@ -1,5 +1,6 @@
 import {
   BUILT_IN_STYLE_IDS,
+  MAX_SHORTCUT_COUNT,
   SUPPORTED_LANGUAGE_CODES,
   type AppSettings,
   type KeyboardShortcut,
@@ -43,6 +44,8 @@ export interface StyleOption {
   readonly selection: StyleSelection;
   readonly value: string;
 }
+
+export const MAX_SHORTCUT_BINDINGS = MAX_SHORTCUT_COUNT;
 
 export function getSourceLanguageOptions(): readonly {
   readonly label: string;
@@ -190,8 +193,63 @@ export function formatShortcut(shortcut: KeyboardShortcut): string {
   return [...modifiers, formatShortcutCode(shortcut.code)].join(' + ');
 }
 
+/** Formats the compact list used in the popup and shortcut settings summary. */
+export function formatShortcutBindings(shortcuts: readonly KeyboardShortcut[]): string {
+  return shortcuts.map(formatShortcut).join(' · ');
+}
+
+/** Adds a binding only when it is unique and the supported limit has not been reached. */
+export function addShortcutBinding(
+  shortcuts: readonly KeyboardShortcut[],
+  shortcut: KeyboardShortcut
+): KeyboardShortcut[] | null {
+  if (
+    shortcuts.length >= MAX_SHORTCUT_BINDINGS ||
+    shortcuts.some((candidate) => shortcutsEqual(candidate, shortcut))
+  ) {
+    return null;
+  }
+  return [...shortcuts.map(cloneShortcut), cloneShortcut(shortcut)];
+}
+
+/** Replaces one binding without permitting a duplicate combination. */
+export function replaceShortcutBinding(
+  shortcuts: readonly KeyboardShortcut[],
+  index: number,
+  shortcut: KeyboardShortcut
+): KeyboardShortcut[] | null {
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= shortcuts.length ||
+    shortcuts.some(
+      (candidate, candidateIndex) => candidateIndex !== index && shortcutsEqual(candidate, shortcut)
+    )
+  ) {
+    return null;
+  }
+  return shortcuts.map((candidate, candidateIndex) =>
+    candidateIndex === index ? cloneShortcut(shortcut) : cloneShortcut(candidate)
+  );
+}
+
+/** Removes one binding while preserving the required minimum of one. */
+export function removeShortcutBinding(
+  shortcuts: readonly KeyboardShortcut[],
+  index: number
+): KeyboardShortcut[] | null {
+  if (!Number.isInteger(index) || index < 0 || index >= shortcuts.length || shortcuts.length <= 1) {
+    return null;
+  }
+  return shortcuts.filter((_, candidateIndex) => candidateIndex !== index).map(cloneShortcut);
+}
+
 export function shortcutFromKeyboardEvent(event: KeyboardEvent): KeyboardShortcut | null {
-  if (event.isComposing || isModifierCode(event.code)) {
+  if (
+    event.isComposing ||
+    isModifierCode(event.code) ||
+    (!event.altKey && !event.ctrlKey && !event.metaKey)
+  ) {
     return null;
   }
   return {
@@ -238,6 +296,20 @@ function formatShortcutCode(code: string): string {
     return code.slice(5);
   }
   return code;
+}
+
+function shortcutsEqual(left: KeyboardShortcut, right: KeyboardShortcut): boolean {
+  return (
+    left.code === right.code &&
+    left.alt === right.alt &&
+    left.ctrl === right.ctrl &&
+    left.meta === right.meta &&
+    left.shift === right.shift
+  );
+}
+
+function cloneShortcut(shortcut: KeyboardShortcut): KeyboardShortcut {
+  return { ...shortcut };
 }
 
 function isModifierCode(code: string): boolean {
