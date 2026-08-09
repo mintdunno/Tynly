@@ -4,6 +4,7 @@ import { GeminiProvider } from './gemini-adapter.ts';
 import { OllamaProvider } from './ollama-adapter.ts';
 import { OpenAiCompatibleProvider } from './openai-compatible-adapter.ts';
 import { OpenAiProvider } from './openai-adapter.ts';
+import { CustomJsonProvider } from './custom-json-adapter.ts';
 import { ProviderRegistry } from './provider-registry.ts';
 
 import type { AnyAIProvider } from './types.ts';
@@ -17,7 +18,8 @@ export function createDefaultProviders(
     new OpenAiCompatibleProvider(httpClient),
     new AnthropicProvider(httpClient),
     new GeminiProvider(httpClient),
-    new OllamaProvider(httpClient)
+    new OllamaProvider(httpClient),
+    new CustomJsonProvider(httpClient)
   ];
 }
 

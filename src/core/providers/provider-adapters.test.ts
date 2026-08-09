@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type {
   AnthropicProviderProfile,
+  CustomJsonProviderProfile,
   GeminiProviderProfile,
   OllamaProviderProfile,
   OpenAiCompatibleProviderProfile,
@@ -9,6 +10,7 @@ import type {
 } from '../settings/schema.ts';
 
 import { AnthropicProvider } from './anthropic-adapter.ts';
+import { CustomJsonProvider } from './custom-json-adapter.ts';
 import { GeminiProvider } from './gemini-adapter.ts';
 import { HttpClient, type HttpFetch } from './http-client.ts';
 import { OllamaProvider } from './ollama-adapter.ts';
@@ -80,6 +82,32 @@ const geminiProfile: GeminiProviderProfile = {
   apiKey: 'gemini-secret'
 };
 
+const customJsonProfile: CustomJsonProviderProfile = {
+  id: 'custom-main',
+  name: 'Custom API',
+  kind: 'custom-json',
+  selectedModelId: 'custom-model',
+  timeoutMs: 30_000,
+  temperature: null,
+  maxOutputTokens: null,
+  endpoint: 'https://custom.example.test/v1/transform',
+  method: 'POST',
+  authentication: { kind: 'header', headerName: 'X-API-Key', value: 'custom-secret' },
+  headers: [{ name: 'X-Tenant', value: 'team-a' }],
+  modelsEndpoint: 'https://custom.example.test/v1/models',
+  requestTemplate: JSON.stringify({
+    input: {
+      model: '{{model}}',
+      prompt: '{{prompt}}',
+      source: '{{source}}',
+      style: '{{style}}',
+      target: '{{target}}',
+      text: '{{text}}'
+    }
+  }),
+  responseTextPath: 'choices.0.message.content'
+};
+
 const ollamaProfile: OllamaProviderProfile = {
   id: 'ollama-local',
   name: 'Local Ollama',
@@ -107,6 +135,12 @@ function requestBody(fetch: ReturnType<typeof vi.fn<HttpFetch>>): Record<string,
   const body = fetch.mock.calls[0]?.[1]?.body;
   expect(typeof body).toBe('string');
   return JSON.parse(body as string) as Record<string, unknown>;
+}
+
+function createAbortError(): Error {
+  const error = new Error('The request was aborted.');
+  error.name = 'AbortError';
+  return error;
 }
 
 describe('provider adapters', () => {
@@ -350,6 +384,144 @@ describe('provider adapters', () => {
     await expect(geminiAdapter.transform(transformRequest, geminiProfile)).rejects.toMatchObject({
       code: 'INVALID_RESPONSE'
     });
+  });
+
+  it('interpolates a custom JSON request as data and extracts a safe response path', async () => {
+    const injectionLikeText = 'xin chao"},"injected":true,"ignored":"';
+    const request = { ...transformRequest, text: injectionLikeText };
+    const fetch = createFetch(
+      responseBody({ choices: [{ message: { content: 'Hello, team.' } }] })
+    );
+    const adapter = new CustomJsonProvider(new HttpClient({ fetch }));
+
+    await expect(adapter.transform(request, customJsonProfile)).resolves.toEqual({
+      operationId: 'operation-1',
+      text: 'Hello, team.'
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://custom.example.test/v1/transform',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(fetch.mock.calls[0]?.[1]?.headers).toEqual({
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-API-Key': 'custom-secret',
+      'X-Tenant': 'team-a'
+    });
+    expect(requestBody(fetch)).toEqual({
+      input: {
+        model: 'custom-model',
+        prompt: transformRequest.prompt,
+        source: 'vi',
+        style: 'natural and idiomatic',
+        target: 'en',
+        text: injectionLikeText
+      }
+    });
+    expect(requestBody(fetch)).not.toHaveProperty('injected');
+  });
+
+  it('discovers conventional custom models with configured bearer authentication', async () => {
+    const fetch = createFetch(
+      responseBody({ models: ['custom-model', { id: ' ', name: 'alternate-model' }] })
+    );
+    const adapter = new CustomJsonProvider(new HttpClient({ fetch }));
+    const bearerProfile: CustomJsonProviderProfile = {
+      ...customJsonProfile,
+      authentication: { kind: 'bearer', token: 'custom-bearer-token' },
+      headers: []
+    };
+
+    await expect(adapter.listModels(bearerProfile)).resolves.toEqual([
+      { id: 'custom-model', label: 'custom-model' },
+      { id: 'alternate-model', label: 'alternate-model' }
+    ]);
+    expect(fetch).toHaveBeenCalledWith(
+      'https://custom.example.test/v1/models',
+      expect.objectContaining({ method: 'GET' })
+    );
+    expect(fetch.mock.calls[0]?.[1]?.headers).toEqual({
+      Accept: 'application/json',
+      Authorization: 'Bearer custom-bearer-token',
+      'Content-Type': 'application/json'
+    });
+  });
+
+  it('keeps manual custom-model fallback available when discovery is disabled or unavailable', async () => {
+    const noDiscoveryFetch = vi.fn<HttpFetch>();
+    const noDiscoveryAdapter = new CustomJsonProvider(new HttpClient({ fetch: noDiscoveryFetch }));
+    await expect(
+      noDiscoveryAdapter.listModels({ ...customJsonProfile, modelsEndpoint: null })
+    ).resolves.toEqual([]);
+    expect(noDiscoveryFetch).not.toHaveBeenCalled();
+
+    const unavailableFetch = createFetch(responseBody({ error: 'not found' }, 404));
+    const unavailableAdapter = new CustomJsonProvider(new HttpClient({ fetch: unavailableFetch }));
+    await expect(unavailableAdapter.listModels(customJsonProfile)).resolves.toEqual([]);
+  });
+
+  it('uses the configured custom template and path for a compact connection test', async () => {
+    const fetch = createFetch(responseBody({ choices: [{ message: { content: 'OK' } }] }));
+    const adapter = new CustomJsonProvider(new HttpClient({ fetch }));
+
+    await expect(adapter.testConnection(customJsonProfile)).resolves.toEqual({ ok: true });
+    expect(requestBody(fetch)).toMatchObject({
+      input: {
+        model: 'custom-model',
+        prompt: 'Reply with OK.',
+        text: 'Reply with OK.'
+      }
+    });
+  });
+
+  it('rejects an unsafe custom response path before sending text to a provider', async () => {
+    const fetch = createFetch(
+      responseBody({ choices: [{ message: { content: 'Should not run.' } }] })
+    );
+    const adapter = new CustomJsonProvider(new HttpClient({ fetch }));
+
+    await expect(
+      adapter.transform(transformRequest, {
+        ...customJsonProfile,
+        responseTextPath: 'constructor.value'
+      })
+    ).rejects.toMatchObject({ code: 'CONFIGURATION' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed custom response text without applying it', async () => {
+    const fetch = createFetch(responseBody({ choices: [{ message: { content: 7 } }] }));
+    const adapter = new CustomJsonProvider(new HttpClient({ fetch }));
+
+    await expect(adapter.transform(transformRequest, customJsonProfile)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE'
+    });
+  });
+
+  it('forwards custom profile timeouts through the shared HTTP boundary', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const fetch = vi.fn<HttpFetch>(
+        (_url, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(createAbortError()), {
+              once: true
+            });
+          })
+      );
+      const adapter = new CustomJsonProvider(new HttpClient({ fetch }));
+      const pending = adapter.transform(transformRequest, customJsonProfile);
+      const rejected = expect(pending).rejects.toMatchObject({ code: 'TIMEOUT' });
+
+      await vi.advanceTimersByTimeAsync(customJsonProfile.timeoutMs);
+
+      await rejected;
+      expect(fetch.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sends Ollama chat requests with local custom authorization and options', async () => {

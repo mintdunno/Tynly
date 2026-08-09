@@ -53,8 +53,9 @@ describe('ProviderRegistry', () => {
       registry.resolve('openai-compatible').kind,
       registry.resolve('anthropic').kind,
       registry.resolve('gemini').kind,
-      registry.resolve('ollama').kind
-    ]).toEqual(['openai', 'openai-compatible', 'anthropic', 'gemini', 'ollama']);
+      registry.resolve('ollama').kind,
+      registry.resolve('custom-json').kind
+    ]).toEqual(['openai', 'openai-compatible', 'anthropic', 'gemini', 'ollama', 'custom-json']);
   });
 
   it('resolves the registered adapter by settings provider kind', () => {

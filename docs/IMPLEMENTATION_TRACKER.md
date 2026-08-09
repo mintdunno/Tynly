@@ -76,12 +76,12 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 [x] Implement Anthropic adapter and tests.
 [x] Implement Gemini adapter and tests.
-[ ] Define custom API configuration and endpoint/header validation.
-[ ] Implement safe JSON-template interpolation.
-[ ] Implement safe response-path extraction.
-[ ] Implement optional custom-model discovery.
-[ ] Test dangerous keys, response paths, escaping, timeouts, and error cases.
-[ ] Review and commit provider adapter work.
+[x] Define custom API configuration and endpoint/header validation.
+[x] Implement safe JSON-template interpolation.
+[x] Implement safe response-path extraction.
+[x] Implement optional custom-model discovery.
+[x] Test dangerous keys, response paths, escaping, timeouts, and error cases.
+[-] Review and commit provider adapter work.
 
 ## Phase 6 — Input adapters, sensitive safety, and Undo
 

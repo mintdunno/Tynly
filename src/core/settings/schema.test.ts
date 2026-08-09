@@ -174,4 +174,58 @@ describe('settings schema', () => {
       false
     );
   });
+
+  it('validates custom JSON templates, response paths, and authentication headers', () => {
+    const customProfile = {
+      id: 'custom',
+      name: 'Custom API',
+      kind: 'custom-json' as const,
+      selectedModelId: 'custom-model',
+      timeoutMs: 30_000,
+      temperature: null,
+      maxOutputTokens: null,
+      endpoint: 'https://custom.example.test/transform',
+      method: 'POST' as const,
+      authentication: { kind: 'header' as const, headerName: 'X-API-Key', value: 'private' },
+      headers: [{ name: 'X-Tenant', value: 'team-a' }],
+      modelsEndpoint: null,
+      requestTemplate: JSON.stringify({ model: '{{model}}', prompt: '{{prompt}}' }),
+      responseTextPath: 'choices.0.message.content'
+    };
+
+    expect(isProviderProfile(customProfile)).toBe(true);
+    expect(
+      isProviderProfile({
+        ...customProfile,
+        requestTemplate: JSON.stringify({ prompt: '{{unknown}}' })
+      })
+    ).toBe(false);
+    expect(isProviderProfile({ ...customProfile, responseTextPath: 'constructor.value' })).toBe(
+      false
+    );
+    expect(
+      isProviderProfile({
+        ...customProfile,
+        authentication: { kind: 'header', headerName: 'Content-Type', value: 'private' }
+      })
+    ).toBe(false);
+    expect(
+      isProviderProfile({
+        ...customProfile,
+        headers: [{ name: 'authorization', value: 'Bearer spoofed' }]
+      })
+    ).toBe(false);
+    expect(
+      isProviderProfile({
+        ...customProfile,
+        headers: [{ name: 'x-api-key', value: 'ambiguous' }]
+      })
+    ).toBe(false);
+    expect(
+      isProviderProfile({
+        ...customProfile,
+        headers: [{ name: '__proto__', value: 'unsafe' }]
+      })
+    ).toBe(false);
+  });
 });

@@ -23,3 +23,4 @@ export {
 export { OllamaProvider, OllamaAdapter } from './ollama-adapter.ts';
 export { AnthropicProvider, AnthropicAdapter } from './anthropic-adapter.ts';
 export { GeminiProvider, GeminiAdapter } from './gemini-adapter.ts';
+export { CustomJsonProvider, CustomJsonAdapter } from './custom-json-adapter.ts';

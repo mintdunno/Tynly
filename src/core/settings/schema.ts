@@ -4,6 +4,12 @@
  * scripts receive ContentSettingsSnapshot instead.
  */
 
+import {
+  isSafeCustomJsonHeaderName,
+  parseCustomJsonRequestTemplate,
+  parseCustomJsonResponsePath
+} from './custom-json-validation.ts';
+
 export const CURRENT_SETTINGS_VERSION = 1 as const;
 
 export const SUPPORTED_LANGUAGE_CODES = ['vi', 'en', 'ja', 'ko', 'zh', 'fr', 'de', 'es'] as const;
@@ -389,20 +395,24 @@ export function isProviderProfile(value: unknown): value is ProviderProfile {
       );
     }
     case 'custom-json': {
+      const authentication = getOwnDataValue(value, 'authentication');
       return (
         hasExactOwnDataFields(value, CUSTOM_JSON_PROFILE_FIELDS) &&
         isProviderProfileBase(value) &&
         isHttpUrl(getOwnDataValue(value, 'endpoint')) &&
         isOneOf(getOwnDataValue(value, 'method'), HTTP_METHODS) &&
-        isCustomApiAuthentication(getOwnDataValue(value, 'authentication')) &&
-        isProviderHeaders(getOwnDataValue(value, 'headers')) &&
+        isCustomApiAuthentication(authentication) &&
+        isCustomJsonHeaders(getOwnDataValue(value, 'headers'), authentication) &&
         (getOwnDataValue(value, 'modelsEndpoint') === null ||
           isHttpUrl(getOwnDataValue(value, 'modelsEndpoint'))) &&
-        isBoundedText(getOwnDataValue(value, 'requestTemplate'), MAX_TEMPLATE_LENGTH) &&
-        isNonBlankSingleLineText(
+        parseCustomJsonRequestTemplate(
+          getOwnDataValue(value, 'requestTemplate'),
+          MAX_TEMPLATE_LENGTH
+        ) !== null &&
+        parseCustomJsonResponsePath(
           getOwnDataValue(value, 'responseTextPath'),
           MAX_RESPONSE_PATH_LENGTH
-        )
+        ) !== null
       );
     }
     default:
@@ -741,7 +751,9 @@ export function isCustomApiAuthentication(value: unknown): value is CustomApiAut
     case 'header':
       return (
         hasExactOwnDataFields(value, ['kind', 'headerName', 'value']) &&
-        isHeaderName(getOwnDataValue(value, 'headerName')) &&
+        isSafeCustomJsonHeaderName(getOwnDataValue(value, 'headerName'), {
+          allowAuthorization: true
+        }) &&
         isSecret(getOwnDataValue(value, 'value'))
       );
     default:
@@ -761,6 +773,30 @@ export function isProviderHeaders(value: unknown): value is ProviderHeader[] {
         isSingleLineText(getOwnDataValue(header, 'value'), MAX_HEADER_VALUE_LENGTH)
     )
   );
+}
+
+function isCustomJsonHeaders(
+  value: unknown,
+  authentication: CustomApiAuthentication
+): value is ProviderHeader[] {
+  if (!isProviderHeaders(value)) {
+    return false;
+  }
+
+  const names = new Set<string>();
+  for (const header of value) {
+    if (!isSafeCustomJsonHeaderName(header.name)) {
+      return false;
+    }
+
+    const name = header.name.toLowerCase();
+    if (names.has(name)) {
+      return false;
+    }
+    names.add(name);
+  }
+
+  return authentication.kind !== 'header' || !names.has(authentication.headerName.toLowerCase());
 }
 
 export function isProfileId(value: unknown): value is string {

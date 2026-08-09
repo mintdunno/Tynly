@@ -246,6 +246,39 @@ export function parseGeminiModelList(value: unknown): readonly BoundedModel[] {
 }
 
 /**
+ * Accepts conventional data/models arrays from a user-configured models endpoint.
+ * Unknown shapes remain an invalid response so manual model entry stays the safe fallback.
+ */
+export function parseCustomModelList(value: unknown): readonly BoundedModel[] {
+  const rawModels = Array.isArray(value)
+    ? value
+    : isPlainRecord(value)
+      ? readCustomModelArray(value)
+      : null;
+  if (rawModels === null) {
+    throw new AppError('INVALID_RESPONSE');
+  }
+
+  const models: BoundedModel[] = [];
+  const seen = new Set<string>();
+  for (const entry of rawModels) {
+    if (models.length >= MAX_PROVIDER_MODELS) {
+      break;
+    }
+
+    const id = readCustomModelId(entry);
+    if (id === null || !validModelId(id) || seen.has(id)) {
+      continue;
+    }
+
+    seen.add(id);
+    models.push({ id, label: id.slice(0, MAX_PROVIDER_MODEL_LABEL_LENGTH) });
+  }
+
+  return models;
+}
+
+/**
  * Gemini discovery prefixes model names with `models/`, while generation routes
  * require a single model path segment after their own `/models/` prefix.
  */
@@ -439,6 +472,33 @@ function readOpenAiContent(value: Record<string, unknown>): unknown {
   }
 
   return readDataProperty(message, 'content');
+}
+
+function readCustomModelArray(value: Record<string, unknown>): readonly unknown[] | null {
+  const data = readDataProperty(value, 'data');
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  const models = readDataProperty(value, 'models');
+  return Array.isArray(models) ? models : null;
+}
+
+function readCustomModelId(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (!isPlainRecord(value)) {
+    return null;
+  }
+
+  for (const key of ['id', 'name', 'model']) {
+    const candidate = readDataProperty(value, key);
+    if (validModelId(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 function readOllamaContent(value: Record<string, unknown>): unknown {
