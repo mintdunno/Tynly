@@ -92,7 +92,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Implement sensitive-target detector.
 [x] Implement validated UndoService and native-undo preference.
 [x] Test replacements, events, controlled fields, sensitive exclusions, and undo.
-[-] Review and commit Phase 6.
+[x] Review and commit Phase 6 (8fb45ac).
 
 ## Phase 7 — Content triggers and interaction UI
 
