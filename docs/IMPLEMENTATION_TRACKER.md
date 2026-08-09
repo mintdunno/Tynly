@@ -128,6 +128,6 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Require trusted user events before content transform actions and isolate the interaction UI from page scripts.
 [x] Complete README, provider guide, architecture, tracker, and decision records.
 [-] Execute manual Chrome verification checklist.
-[ ] Audit permissions, secrets, Git status, Git diff, Git log, and tracker.
+[x] Audit permissions, secrets, Git status, Git diff, Git log, and tracker.
 [ ] Update CHANGELOG.md with changes, commits, and important notes.
 [ ] Commit release documentation and push normally.
