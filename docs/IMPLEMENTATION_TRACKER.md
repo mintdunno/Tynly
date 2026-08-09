@@ -81,7 +81,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Implement safe response-path extraction.
 [x] Implement optional custom-model discovery.
 [x] Test dangerous keys, response paths, escaping, timeouts, and error cases.
-[-] Review and commit provider adapter work.
+[x] Review and commit provider adapter work (0d8567e, e199e9e).
 
 ## Phase 6 — Input adapters, sensitive safety, and Undo
 
