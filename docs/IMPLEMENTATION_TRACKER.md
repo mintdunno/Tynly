@@ -104,7 +104,7 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Implement TransformController integration, loading, cancellation, and errors.
 [x] Implement toast, preview, result popover, copy, replace, and Undo actions.
 [x] Test trigger parity, page non-mutation, IME, preview, and stale responses.
-[-] Review and commit Phase 7.
+[x] Review and commit Phase 7 (44de658).
 
 ## Phase 8 — Popup and settings
 
