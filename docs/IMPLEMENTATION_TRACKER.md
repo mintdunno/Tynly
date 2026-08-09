@@ -85,14 +85,14 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 6 — Input adapters, sensitive safety, and Undo
 
-[ ] Define InputAdapter, InputSnapshot, replacement, and undo contracts.
-[ ] Implement text-input adapter and native setter/event handling.
-[ ] Implement textarea adapter and selection replacement.
-[ ] Implement contenteditable adapter and range validation.
-[ ] Implement sensitive-target detector.
-[ ] Implement validated UndoService and native-undo preference.
-[ ] Test replacements, events, controlled fields, sensitive exclusions, and undo.
-[ ] Review and commit Phase 6.
+[x] Define InputAdapter, InputSnapshot, replacement, and undo contracts.
+[x] Implement text-input adapter and native setter/event handling.
+[x] Implement textarea adapter and selection replacement.
+[x] Implement contenteditable adapter and range validation.
+[x] Implement sensitive-target detector.
+[x] Implement validated UndoService and native-undo preference.
+[x] Test replacements, events, controlled fields, sensitive exclusions, and undo.
+[-] Review and commit Phase 6.
 
 ## Phase 7 — Content triggers and interaction UI
 
