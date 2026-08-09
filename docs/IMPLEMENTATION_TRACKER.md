@@ -125,8 +125,9 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Add Playwright extension fixtures and core workflow coverage.
 [x] Add CI for typecheck, lint, unit tests, build, and E2E tests.
 [x] Add bundle-size inspection and record final sizes.
-[ ] Complete README, provider guide, architecture, tracker, and decision records.
-[ ] Execute manual Chrome verification checklist.
+[x] Require trusted user events before content transform actions and isolate the interaction UI from page scripts.
+[x] Complete README, provider guide, architecture, tracker, and decision records.
+[-] Execute manual Chrome verification checklist.
 [ ] Audit permissions, secrets, Git status, Git diff, Git log, and tracker.
 [ ] Update CHANGELOG.md with changes, commits, and important notes.
 [ ] Commit release documentation and push normally.

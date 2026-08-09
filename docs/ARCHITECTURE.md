@@ -4,7 +4,7 @@
 
 Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 
-1. Content scripts capture editable text, observe focused/selected targets, and render isolated controls.
+1. Content scripts capture editable text, observe focused/selected targets, and render isolated controls in eligible HTTP(S) frames.
 2. The background service worker owns private settings, provider selection, network calls, timeout/cancellation, and normalized errors.
 3. Popup and settings pages are trusted extension UI. They use background messaging and never expose saved secrets after persistence.
 4. Provider APIs receive an explicit user-initiated compact transformation request only.
@@ -22,6 +22,7 @@ Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 
 - Prompt construction is centralized and provider-neutral. A single compact prompt names the source/target language, applies the resolved style, fixes ordinary text issues, preserves meaning, and asks for text-only output. Auto source detection is part of that same request; the input is appended once beneath an unambiguous `Text:` delimiter.
 - There is one active transform operation per stable editor or selection scope. Starting a newer operation aborts the earlier signal. A result is consumed only once when its scope and operation ID still match; cancelled, superseded, wrong-scope, and already-consumed results cannot apply. Target revision checks remain the final DOM safety gate.
+- Transform entry points require browser-trusted user events. The content UI uses a closed Shadow DOM root, so page scripts cannot inspect controls or synthesize a control action to make a provider request.
 - Provider output is sanitized conservatively. Tynly trims outer whitespace and removes only an unmistakable full-output label, one enclosing code fence, or simple enclosing quotes. It rejects empty/non-text output and preserves potentially meaningful prose, labels, quotes, and multiple fences.
 
 ## Provider flow
@@ -37,6 +38,7 @@ Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 - Provider fetches happen only in the service worker.
 - Chrome local storage is restricted to trusted extension contexts and is never synced.
 - Content receives only a redacted settings projection.
+- The content UI's closed root keeps result text and actions inaccessible to page JavaScript. Every button callback rechecks that its click was trusted.
 - Secrets never enter page DOM, URLs, logs, analytics, error messages, exports, or tests.
 - Custom JSON APIs use data-only templates and safe paths; no eval or arbitrary JavaScript.
 - Browser host access is used only because Tynly must operate in text fields across normal web pages. No background network activity occurs until a user action.
@@ -55,6 +57,8 @@ Tynly is a Manifest V3 Chrome extension with four execution boundaries:
 - clipboardWrite: required only after an explicit Copy action in a Tynly result UI.
 - http and https host access: required to show Tynly controls in normal browser text fields and to call user-configured provider endpoints. Chrome-restricted pages and file URLs are intentionally outside the initial scope.
 
+The content declaration uses `all_frames: true` so same- and cross-origin normal-page editors can be handled. Vite's CRX integration emits only the hashed content loader and its data-only dependencies as web-accessible resources for those HTTP(S) pages; these assets contain no credentials, provider runtime, or Preact UI runtime.
+
 Tynly does not request tabs, activeTab, commands, notifications, identity, history, downloads, scripting, or externally connectable access in the initial manifest.
 
 ## Extension boundaries
@@ -71,8 +75,12 @@ The canonical mark is assets/brand/tynly-mark.svg. A deterministic build script 
 
 ## Performance rules
 
-- No polling, full-page scan, continuous AI checks, or automatic language detection.
+- No polling, full-page scan, continuous AI checks, or separate language-detection request. Auto source detection is part of the explicit transform request.
 - Event delegation is used for focus, selection, and keyboard handling.
 - Injected UI is lazy and geometry work runs only while visible.
 - A normal transform makes one concise API request.
-- Bundle size is checked before release, especially the content entry point.
+- Bundle size is checked before release, especially the content entry point. `pnpm bundle:check` follows the emitted manifest and entry graphs, enforces raw-size budgets, and confirms the Preact runtime is absent from content. Current measurements are in docs/BUNDLE_AUDIT.md.
+
+## Settings refresh behavior
+
+The background service worker reads the latest persisted profile whenever it handles a provider action. A content script intentionally receives its redacted settings snapshot once at bootstrap, so changing control or language settings requires reloading an already-open page before its visible content UI refreshes.

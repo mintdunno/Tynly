@@ -150,4 +150,4 @@ Before implementation in each phase:
 
 ## Current handoff
 
-Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9 is ready to begin.
+Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9 is in progress.

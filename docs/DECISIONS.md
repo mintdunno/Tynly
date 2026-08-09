@@ -34,7 +34,7 @@ Custom JSON request templates are parsed as JSON and only approved variables are
 
 Status: accepted.
 
-Every replacement is guarded by operation IDs and target revision validation. Sensitive fields are excluded. Undo is mandatory and must not overwrite edits made after the transform. The normal path uses one request and no automatic retry.
+Every replacement is guarded by operation IDs and target revision validation. Sensitive fields are excluded. A validated Undo record is created for a successful replacement and its notification can be disabled; Undo must not overwrite edits made after the transform. The normal path uses one request and no automatic retry.
 
 ## ADR-007 — Maintain visible phase governance
 
@@ -83,3 +83,15 @@ Status: accepted.
 Status: accepted.
 
 All provider requests use the injected `HttpClient`. It clamps profile timeouts, forwards caller cancellation, maps only safe HTTP status metadata, bounds successful JSON payloads, and avoids failed-body reads. API-root joining and case-insensitive header validation prevent credentials or browser-controlled transport headers from being smuggled into requests.
+
+## ADR-015: Require trusted events for content actions and close the interaction root
+
+Status: accepted.
+
+Web pages can dispatch synthetic click and keyboard events. Tynly therefore requires `Event.isTrusted` for every content action that can transform, copy, replace, undo, or dismiss data. Its production UI uses a closed Shadow DOM root so a page cannot inspect result text or locate the controls to invoke them. Unit tests use explicit test-only event/root substitutes; the shipped content bootstrap always uses the native trusted-event check and closed root.
+
+## ADR-016: Audit emitted extension bundles instead of source-module estimates
+
+Status: accepted.
+
+Vite hashes and splits extension output, so source file sizes cannot establish a meaningful runtime budget. The release audit follows the generated manifest, page HTML, static imports, and CRX content-loader reference to measure each actual load graph. It enforces raw unpacked limits and fails when popup/settings entry code or the Preact JSX runtime reaches the content graph.
