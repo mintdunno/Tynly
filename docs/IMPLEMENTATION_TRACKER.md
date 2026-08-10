@@ -168,3 +168,10 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [ ] Complete and record the manual Chrome verification result.
 [x] Update CHANGELOG.md with changes, commits, and important notes.
 [ ] Review Git state, commit release notes, and push normally.
+
+## Phase 14 — Extension-page preload compatibility
+
+[x] Disable Vite module-preload output for extension pages.
+[x] Verify built popup and Settings HTML contains no module-preload links.
+[x] Run focused automated checks and inspect the change before committing.
+[-] Recheck unpacked Chrome console after rebuilding and reloading the extension.

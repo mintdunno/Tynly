@@ -4,7 +4,7 @@
 
 Approved on 2026-08-08. This is the canonical working plan for every developer and agent working in this repository. The detailed immutable approval record is mirrored in docs/IMPLEMENTATION_PLAN.md; live task state belongs in docs/IMPLEMENTATION_TRACKER.md.
 
-Current phase: Phase 13 — Regression verification and release handoff.
+Current phase: Phase 14 — Extension-page preload compatibility.
 
 ## Operating rules
 
@@ -195,6 +195,21 @@ Expected commits:
 - test: cover settings and provider improvements
 - docs: update controls and provider release notes
 
+### Phase 14 — Extension-page preload compatibility
+
+Remove Vite's speculative module-preload tags from extension HTML pages. Chromium can associate
+those requests with a different extension world and emit misleading preload-mismatch warnings,
+even though the extension continues to run. Keep native ESM loading intact and verify the emitted
+popup and Settings pages contain no module-preload links.
+
+Acceptance: production output has no `rel="modulepreload"` tags, popup and Settings still load
+their module graphs normally, automated checks pass, and unpacked Chrome no longer reports the
+preload mismatch warnings.
+
+Expected commit:
+
+- fix: avoid extension preload-world warnings
+
 ## Phase transition checklist
 
 Before implementation in each phase:
@@ -210,4 +225,4 @@ Before implementation in each phase:
 
 ## Current handoff
 
-Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9's manual Chrome and changelog gates remain pending and will be repeated after the new work. Phase 10 was completed in c674c27. Phase 11 was completed in a39fb42. Phase 12 was completed in ae9611b. Phase 13 is now in progress.
+Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9's manual Chrome and changelog gates remain pending and will be repeated after the new work. Phase 10 was completed in c674c27. Phase 11 was completed in a39fb42. Phase 12 was completed in ae9611b. Phase 13 remains pending its manual Chrome release verification. Phase 14 is now in progress.
