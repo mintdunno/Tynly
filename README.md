@@ -9,18 +9,23 @@ continuous grammar checking or full-page translation.
 ## What it does
 
 - Supports `input`, `textarea`, and supported `contenteditable` editors.
-- Provides three equivalent transform triggers: a field button, selected-text button, and the
-  configurable `Alt + A` shortcut.
+- Provides three equivalent transform triggers: a field button, selected-text button, and one to
+  three configurable modifier-based shortcuts (default: `Alt + A`).
 - Defaults to Vietnamese to English, Natural style, and automatic replacement.
-- Supports Replace, Preview, Copy, and validated Undo workflows.
-- Supports OpenAI, OpenAI-compatible, Anthropic, Google Gemini, Ollama, and secure custom JSON APIs.
+- Uses one shared Replace or Preview decision under **Behavior**, then supports Copy and validated
+  Undo workflows consistently across every trigger.
+- Supports OpenAI, Anthropic, Google Gemini, Ollama, OpenAI-compatible, and secure custom JSON APIs,
+  with quick-start presets for OpenRouter, Groq, DeepSeek, Mistral, Together AI, Fireworks,
+  Perplexity, and xAI.
 
 ## Use Tynly
 
-1. Open the extension's **Settings** page and add a provider profile.
-2. Save a model ID manually or use **Refresh models**, then run **Test connection**.
-3. Focus an editable field, select text, or press the configured shortcut.
-4. Choose Replace or Preview in Settings; when its notification is enabled, Undo is shown after a
+1. Open the extension's **Settings** page and choose a Quick start, built-in, or advanced provider.
+2. Enter a model ID manually or use **Refresh models**, then choose **Save & test**. It saves first
+   and sends one small request to the selected model so it can verify the root, credential, and model
+   together.
+3. Focus an editable field, select text, or use any saved shortcut binding.
+4. Choose Replace or Preview once in **Behavior**; when its notification is enabled, Undo is shown after a
    successful editable replacement.
 
 Tynly skips password, payment, and one-time-code fields, as well as text with a PEM private-key
@@ -62,15 +67,15 @@ generated `dist` directory.
 
 ## Development checks
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm format:check` | Verify repository formatting. |
-| `pnpm typecheck` | Type-check without emitting files. |
-| `pnpm lint` | Run static lint checks. |
-| `pnpm test` | Run unit tests. |
-| `pnpm bundle:check` | Build and enforce production bundle budgets. |
-| `pnpm test:e2e` | Run the headed Chromium extension workflow against a local mock provider. |
-| `pnpm check` | Run typecheck, lint, unit tests, production build, and bundle audit. |
+| Command             | Purpose                                                                   |
+| ------------------- | ------------------------------------------------------------------------- |
+| `pnpm format:check` | Verify repository formatting.                                             |
+| `pnpm typecheck`    | Type-check without emitting files.                                        |
+| `pnpm lint`         | Run static lint checks.                                                   |
+| `pnpm test`         | Run unit tests.                                                           |
+| `pnpm bundle:check` | Build and enforce production bundle budgets.                              |
+| `pnpm test:e2e`     | Run the headed Chromium extension workflow against a local mock provider. |
+| `pnpm check`        | Run typecheck, lint, unit tests, production build, and bundle audit.      |
 
 Production size limits and current measurements are in [the bundle audit](docs/BUNDLE_AUDIT.md).
 
@@ -81,6 +86,7 @@ Production size limits and current measurements are in [the bundle audit](docs/B
 - [Architecture decisions](docs/DECISIONS.md)
 - [Live implementation tracker](docs/IMPLEMENTATION_TRACKER.md)
 - [Approved delivery plan](plan.md)
+- [Changelog](CHANGELOG.md)
 
 ## Known limitations
 

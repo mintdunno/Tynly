@@ -163,8 +163,8 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 13 — Regression verification and release handoff
 
-[ ] Run format, typecheck, lint, unit, build, bundle, and E2E checks.
-[ ] Update provider, shortcut, manual-verification, and release documentation.
+[x] Run format, typecheck, lint, unit, build, bundle, and E2E checks.
+[x] Update provider, shortcut, manual-verification, and release documentation.
 [ ] Complete and record the manual Chrome verification result.
-[ ] Update CHANGELOG.md with changes, commits, and important notes.
+[x] Update CHANGELOG.md with changes, commits, and important notes.
 [ ] Review Git state, commit release notes, and push normally.

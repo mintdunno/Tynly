@@ -7,30 +7,54 @@ SDK is bundled, and provider credentials never enter a content script.
 
 ## Common workflow
 
-1. Open **Settings** and add a provider profile.
-2. Enter its base URL or endpoint, secret if required, and a model ID.
-3. Use **Refresh models** when the provider exposes a model list; a manual model ID remains available
-   when discovery is unavailable or intentionally disabled.
-4. Save the profile, activate it, and use **Test connection**. The test sends a short `Reply with OK.`
-   request with the selected model.
+1. Open **Settings** and choose a **Quick start**, **Built-in provider**, or **Advanced setup**
+   profile type.
+2. Quick-start choices fill a safe API root for a popular compatible provider. Enter the required
+   secret and model ID; a manual model ID is always valid when discovery is unavailable.
+3. Use **Refresh models** when the provider exposes a model list.
+4. Choose **Save & test**. Tynly saves that profile first, then sends one small `Reply with OK.`
+   request to its selected model. This verifies the API root, credential, and model together and
+   can consume provider usage.
+5. Choose **Use this provider** when the saved profile should handle future transforms.
 
 Profiles retain their own selected model. Saved API keys, tokens, and header values are intentionally
 blanked in the editor; entering a new value replaces the saved secret, while leaving it blank preserves
-the existing one.
+the existing one. Save & test reports **Testing**, **Connected**, or a fixed safe failure. It never
+renders provider diagnostics, endpoints, headers, or secrets, and it reads the just-saved persisted
+profile rather than a stale background cache.
+
+## Quick-start compatible presets
+
+These presets share Tynly's existing OpenAI-compatible chat adapter. Each creates a new local profile
+with the listed HTTPS API root and friendly name, but never fills a credential or model. Use its
+provider documentation to obtain a key and model ID.
+
+| Preset      | Prefilled API root                      |
+| ----------- | --------------------------------------- |
+| OpenRouter  | `https://openrouter.ai/api/v1`          |
+| Groq        | `https://api.groq.com/openai/v1`        |
+| DeepSeek    | `https://api.deepseek.com/v1`           |
+| Mistral     | `https://api.mistral.ai/v1`             |
+| Together AI | `https://api.together.xyz/v1`           |
+| Fireworks   | `https://api.fireworks.ai/inference/v1` |
+| Perplexity  | `https://api.perplexity.ai`             |
+| xAI         | `https://api.x.ai/v1`                   |
+
+The **OpenAI-compatible API** advanced choice remains available for another compatible API root.
 
 ## Built-in providers
 
-| Provider | Default API root | Authentication | Model discovery and transform protocol | Custom headers |
-| --- | --- | --- | --- | --- |
-| OpenAI | `https://api.openai.com/v1` | Bearer API key | `GET /models`; `POST /chat/completions` | No |
-| OpenAI-compatible | `https://api.openai.com/v1` | Bearer API key | `GET /models`; `POST /chat/completions` | Yes, except adapter-controlled headers |
-| Anthropic | `https://api.anthropic.com` | `x-api-key` | `GET /models`; `POST /messages` with the required API version header | No |
-| Google Gemini | `https://generativelanguage.googleapis.com` | `x-goog-api-key` | `GET /models`; `POST /models/{model}:generateContent` | No |
-| Ollama | `http://localhost:11434` | None by default | `GET /api/tags`; `POST /api/chat` | Yes, including Authorization |
+| Provider          | Default API root                            | Authentication   | Model discovery and transform protocol                               | Custom headers                         |
+| ----------------- | ------------------------------------------- | ---------------- | -------------------------------------------------------------------- | -------------------------------------- |
+| OpenAI            | `https://api.openai.com/v1`                 | Bearer API key   | `GET /models`; `POST /chat/completions`                              | No                                     |
+| OpenAI-compatible | `https://api.openai.com/v1`                 | Bearer API key   | `GET /models`; `POST /chat/completions`                              | Yes, except adapter-controlled headers |
+| Anthropic         | `https://api.anthropic.com`                 | `x-api-key`      | `GET /models`; `POST /messages` with the required API version header | No                                     |
+| Google Gemini     | `https://generativelanguage.googleapis.com` | `x-goog-api-key` | `GET /models`; `POST /models/{model}:generateContent`                | No                                     |
+| Ollama            | `http://localhost:11434`                    | None by default  | `GET /api/tags`; `POST /api/chat`                                    | Yes, including Authorization           |
 
-All built-in providers support manual model IDs, model refresh, connection tests, request cancellation,
-temperature, and output-token configuration. Tynly uses the provider's non-streaming JSON response
-format and returns only plain text to the content workflow.
+Built-in and compatible profiles support manual model IDs, model refresh where the provider exposes it,
+connection checks, request cancellation, and their supported generation settings. Tynly uses the
+provider's non-streaming JSON response format and returns only plain text to the content workflow.
 
 Use an API root, not a complete operation endpoint, for the built-in adapters. URLs must not contain
 credentials, query parameters, or fragments. HTTPS is required except for an Ollama server on
@@ -82,8 +106,9 @@ credentials are not shown in the UI or passed across the extension message bound
 
 - **Model refresh fails:** save or re-check the base URL and credentials, then enter a supported model
   ID manually if the provider does not grant model-list access.
-- **Connection test fails:** confirm the selected model exists and the provider accepts the configured
-  protocol. The test consumes one small request.
+- **Save & test fails:** confirm the selected model exists and the provider accepts the configured
+  protocol. The test consumes one small request; only a safe fixed failure is shown, so use the
+  provider's own dashboard or documentation for detailed diagnostics.
 - **Ollama cannot connect:** start Ollama locally, confirm its port, and use a loopback URL such as
   `http://localhost:11434`.
 - **A custom endpoint rejects the request:** verify the JSON template, chosen method, authentication,
