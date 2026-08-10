@@ -20,10 +20,12 @@ continuous grammar checking or full-page translation.
 
 ## Use Tynly
 
-1. Open the extension's **Settings** page and choose a Quick start, built-in, or advanced provider.
-2. Enter a model ID manually or use **Refresh models**, then choose **Save & test**. It saves first
-   and sends one small request to the selected model so it can verify the root, credential, and model
-   together.
+1. Open the extension's **Settings** page and choose a provider from **Recommended**, **All providers**,
+   or **Advanced**.
+2. Enter the required API key and a model ID manually or with **Refresh models**. Expand **Advanced
+   connection** only when you need to change the provider root, headers, or custom API fields; then choose
+   **Save & test**. It saves first, sends one small request to the selected model, and makes the provider
+   active only when that check succeeds.
 3. Focus an editable field, select text, or use any saved shortcut binding.
 4. Choose Replace or Preview once in **Behavior**; when its notification is enabled, Undo is shown after a
    successful editable replacement.

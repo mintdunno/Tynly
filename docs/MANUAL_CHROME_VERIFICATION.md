@@ -14,12 +14,14 @@ browser permission surfaces vary by installed Chrome version and page.
 
 ## User workflows
 
-- [ ] Add a Quick start preset and confirm its friendly provider name and HTTPS API root are filled
-      while the key and model remain blank. Repeat with the OpenAI-compatible advanced choice if needed.
+- [ ] Open the provider picker. Confirm **Recommended**, **All providers**, and **Advanced** have useful
+      choices, All providers includes the compatible and Custom JSON choices, search finds a provider,
+      and Cancel returns keyboard focus to the opener. Add a recommended preset and confirm its friendly
+      provider name and HTTPS API root are filled while the key and model remain blank.
 - [ ] Save a provider, reopen Settings, refresh its models, enter a manual model ID, then click
       **Save & test** immediately after changing its key or model. Confirm the visible Testing state is
-      followed by Connected or a fixed safe failure; the selected model request must use the newly saved
-      configuration.
+      followed by Connected or a fixed safe failure; success must activate that provider and the selected
+      model request must use the newly saved configuration.
 - [ ] Confirm saved API keys, tokens, and custom headers remain masked after reopening Settings and
       never appear in popup text, page DOM, console output, or safe error messages.
 - [ ] On an input, textarea, controlled input, and contenteditable editor, use the field control,
@@ -40,7 +42,8 @@ browser permission surfaces vary by installed Chrome version and page.
 ## Visual and accessibility review
 
 - [ ] Inspect the popup and Settings in both light and dark Chrome themes. Confirm their text, cards,
-      provider status, shortcut keycaps, and status messages have sufficient contrast and no clipped text.
+      picker options, provider status, shortcut keycaps, and status messages have sufficient contrast and
+      no clipped text.
 - [ ] Resize Settings to 620px or narrower. Confirm the cards, provider editor, headers, shortcut
       rows, and action buttons reflow without horizontal scrolling or overlapping controls.
 - [ ] Navigate the popup and Settings with the keyboard. Confirm each native control and action has a

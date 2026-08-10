@@ -205,6 +205,10 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ### Phase 16C — Coverage and release verification
 
-[ ] Add functional, accessibility, responsive-layout, and regression coverage.
-[ ] Run full automated checks and inspect light/dark/narrow UI.
-[ ] Complete manual Chrome verification, update the release notes, and push normally.
+[x] Add functional, accessibility, responsive-layout, and regression coverage.
+[x] Run full automated checks and inspect light/dark/narrow UI.
+[-] Complete manual Chrome verification, update the release notes, and push normally.
+    Automated Chrome preflight on 2026-08-10 built `dist`, verified the manifest permissions and
+    extension-page preload output, and inspected the redesigned light, dark, and narrow layouts.
+    This environment's Chrome ignored command-line unpacked loading, so an interactive Developer
+    Mode load and the remaining manual checklist are still required before release.

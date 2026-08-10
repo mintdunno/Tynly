@@ -7,15 +7,19 @@ SDK is bundled, and provider credentials never enter a content script.
 
 ## Common workflow
 
-1. Open **Settings** and choose a **Quick start**, **Built-in provider**, or **Advanced setup**
-   profile type.
-2. Quick-start choices fill a safe API root for a popular compatible provider. Enter the required
-   secret and model ID; a manual model ID is always valid when discovery is unavailable.
+1. Open **Settings** and choose a provider from **Recommended**, **All providers**, or **Advanced**.
+   Recommended contains common hosted and local choices; All providers includes every built-in and
+   compatible choice; Advanced contains OpenAI-compatible and Custom JSON setup. Existing profiles
+   remain under **Saved providers**.
+2. Enter the required secret and model ID. A manual model ID is always valid when discovery is
+   unavailable. For normal providers, the API key and model are the primary setup fields; expand
+   **Advanced connection** only to change the API root, headers, timeout, or custom API fields.
 3. Use **Refresh models** when the provider exposes a model list.
 4. Choose **Save & test**. Tynly saves that profile first, then sends one small `Reply with OK.`
-   request to its selected model. This verifies the API root, credential, and model together and
-   can consume provider usage.
-5. Choose **Use this provider** when the saved profile should handle future transforms.
+   request to its selected model. This verifies the API root, credential, and model together,
+   can consume provider usage, and makes that provider active only after a successful check.
+5. Use **Save without testing** only when you need to keep a draft without a provider request. Use
+   **Use this provider** to intentionally switch to an already saved profile without testing it again.
 
 Profiles retain their own selected model. Saved API keys, tokens, and header values are intentionally
 blanked in the editor; entering a new value replaces the saved secret, while leaving it blank preserves

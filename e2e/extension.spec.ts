@@ -3,6 +3,30 @@ import type { Page } from '@playwright/test';
 import { MOCK_TRANSFORM_RESULT } from './mock-provider.ts';
 import { expect, test } from './fixtures.ts';
 
+test('keeps normal hosted-provider setup focused and unactivated until it is tested', async ({
+  extension
+}) => {
+  const settings = await extension.context.newPage();
+  await settings.goto(extension.settingsUrl);
+
+  await settings.getByRole('button', { name: 'Choose a provider' }).click();
+  await expect(settings.getByRole('radiogroup', { name: 'Provider categories' })).toBeVisible();
+  await expect(settings.getByRole('radio', { name: 'Recommended' })).toBeChecked();
+  await settings.getByPlaceholder('Search providers').fill('direct API');
+  await settings.locator('.provider-catalog-card').filter({ hasText: 'OpenAI' }).click();
+  await settings.getByRole('button', { name: 'Continue with OpenAI' }).click();
+
+  await expect(settings.getByLabel('API key')).toBeFocused();
+  await expect(settings.getByLabel('Base URL')).not.toBeVisible();
+  await settings.getByLabel('API key').fill('test-key');
+  await settings.getByLabel('Model ID').fill('test-model');
+  await settings.getByRole('button', { name: 'Save without testing' }).click();
+
+  await expect(settings.getByRole('button', { name: 'Use this provider' })).toBeVisible();
+  await expect(settings.locator('.provider-editor-state')).toHaveCount(0);
+  await expect(settings.getByText('Ready to test').first()).toBeVisible();
+});
+
 test('configures a local provider and safely exercises all transform triggers', async ({
   extension,
   mockProvider
