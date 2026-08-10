@@ -201,7 +201,7 @@ export function ProviderEditor({
   return (
     <section
       aria-label={`${PROVIDER_KIND_LABELS[draft.kind]} configuration`}
-      className="provider-editor"
+      className={`provider-editor${active ? ' provider-editor--active' : ''}`}
     >
       <div className="provider-editor-heading">
         <div>
@@ -329,7 +329,7 @@ export function ProviderEditor({
         ) : null}
       </details>
 
-      <div className="button-row">
+      <div className="button-row provider-actions">
         <button disabled={unavailable} onClick={() => void saveDraft()} type="button">
           Save provider
         </button>
@@ -344,7 +344,7 @@ export function ProviderEditor({
           </button>
         ) : null}
         {capabilities.connectionTest ? (
-          <div aria-label="Connection check">
+          <div aria-label="Connection check" className="connection-check">
             <small id={`${fieldPrefix}-connection-test-help`}>
               Saves this provider, then sends one tiny request to the selected model.
             </small>

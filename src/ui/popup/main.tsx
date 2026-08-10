@@ -79,24 +79,27 @@ function PopupApp() {
         : `${activeProvider.name} · ${activeProvider.selectedModelId}`;
 
   return (
-    <main className="popup-shell" aria-label="Tynly quick controls">
-      <header className="popup-header">
-        <div>
+    <main className="popup-shell popup-dashboard" aria-label="Tynly quick controls">
+      <header className="popup-header popup-dashboard-header">
+        <div className="popup-brand">
           <strong className="product-name">{PRODUCT.name}</strong>
           <p className="muted">{PRODUCT.tagline}</p>
         </div>
       </header>
 
       {error === null ? null : (
-        <p className="notice error" role="alert">
+        <p className="notice error popup-notice" role="alert">
           {error}
         </p>
       )}
 
-      <section className="compact-section" aria-labelledby="popup-language-title">
+      <section
+        className="compact-section popup-card popup-language-card"
+        aria-labelledby="popup-language-title"
+      >
         <h1 id="popup-language-title">Languages</h1>
-        <div className="language-row">
-          <label>
+        <div className="language-row popup-language-pair">
+          <label className="popup-language-select">
             <span className="sr-only">Source language</span>
             <select
               aria-label="Source language"
@@ -115,8 +118,10 @@ function PopupApp() {
               ))}
             </select>
           </label>
-          <span aria-hidden="true">→</span>
-          <label>
+          <span aria-hidden="true" className="language-direction">
+            →
+          </span>
+          <label className="popup-language-select">
             <span className="sr-only">Target language</span>
             <select
               aria-label="Target language"
@@ -152,8 +157,8 @@ function PopupApp() {
         </div>
       </section>
 
-      <section className="compact-section">
-        <label className="stacked-label">
+      <section className="compact-section popup-card popup-style-card">
+        <label className="stacked-label popup-style-control">
           <span>Style</span>
           <select
             disabled={saving}
@@ -175,20 +180,25 @@ function PopupApp() {
         </label>
       </section>
 
-      <section className="compact-section provider-summary" aria-label="Active AI provider">
-        <span>AI</span>
-        <button className="text-button" onClick={openSettings} type="button">
+      <section
+        className="compact-section provider-summary popup-card popup-provider-card"
+        aria-label="Active AI provider"
+      >
+        <div className="provider-summary-content">
+          <span className="provider-summary-label">AI</span>
+        </div>
+        <button className="text-button popup-provider-link" onClick={openSettings} type="button">
           {providerSummary}
         </button>
       </section>
 
-      <footer className="popup-footer">
-        <span className="shortcut-hint">
+      <footer className="popup-footer popup-dashboard-footer">
+        <span className="shortcut-hint popup-shortcut-summary">
           {settings.controls.shortcut.enabled
             ? formatShortcutBindings(settings.controls.shortcut.shortcuts)
             : 'Shortcuts off'}
         </span>
-        <button className="text-button" onClick={openSettings} type="button">
+        <button className="text-button popup-settings-link" onClick={openSettings} type="button">
           Settings
         </button>
       </footer>

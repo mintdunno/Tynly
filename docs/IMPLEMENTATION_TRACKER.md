@@ -154,12 +154,12 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 12 — Minimalist popup and settings design
 
-[ ] Establish the refined visual tokens, hierarchy, surfaces, controls, and responsive behavior.
-[ ] Redesign the popup for fast, legible everyday changes.
-[ ] Redesign Settings around concise sections and a guided provider workflow.
-[ ] Preserve semantic labels, focus indicators, contrast, keyboard navigation, and dark mode.
-[ ] Run UI-focused automated checks and manual Chrome visual verification.
-[ ] Review and commit the coherent phase.
+[x] Establish the refined visual tokens, hierarchy, surfaces, controls, and responsive behavior.
+[x] Redesign the popup for fast, legible everyday changes.
+[x] Redesign Settings around concise sections and a guided provider workflow.
+[x] Preserve semantic labels, focus indicators, contrast, keyboard navigation, and dark mode.
+[x] Run UI-focused automated checks, production build, and light/dark Chromium visual review.
+[x] Review and commit the coherent phase.
 
 ## Phase 13 — Regression verification and release handoff
 

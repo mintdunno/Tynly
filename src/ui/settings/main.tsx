@@ -114,6 +114,9 @@ function SettingsApp() {
     profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? null;
   const selectedModels =
     selectedProfile === null ? [] : (modelsByProfile[selectedProfile.id] ?? []);
+  const activeProfile =
+    profiles.find((profile) => profile.id === settings.providers.activeProfileId) ?? null;
+  const providerCatalogEntry = findProviderCatalogEntry(newProviderCatalogEntryId);
 
   const saveProvider = async (draft: ProviderDraft): Promise<boolean> => {
     const next = await persist((current) => {
@@ -342,9 +345,17 @@ function SettingsApp() {
   return (
     <main className="settings-shell" aria-label="Tynly settings">
       <header className="settings-header">
-        <p className="eyebrow">{PRODUCT.name}</p>
-        <h1>Type anything. Send naturally.</h1>
-        <p className="muted">Your settings stay local to this browser profile.</p>
+        <div className="settings-header-copy">
+          <p className="eyebrow">{PRODUCT.name}</p>
+          <h1>Type anything. Send naturally.</h1>
+          <p className="muted">Your settings stay local to this browser profile.</p>
+        </div>
+        <nav aria-label="Settings sections" className="settings-nav">
+          <a href="#general">General</a>
+          <a href="#behavior">Behavior</a>
+          <a href="#controls">Controls</a>
+          <a href="#providers">Providers</a>
+        </nav>
       </header>
 
       {error === null ? null : (
@@ -358,456 +369,500 @@ function SettingsApp() {
         </p>
       )}
 
-      <section className="settings-section" aria-labelledby="general-title">
-        <div className="section-heading">
-          <div>
-            <h2 id="general-title">General</h2>
-            <p>Choose the language pair and writing style used for every transform.</p>
-          </div>
-        </div>
-        <div className="form-grid">
-          <label>
-            <span>Source language</span>
-            <select
-              disabled={saving}
-              onChange={(event) => {
-                const source = (event.currentTarget as HTMLSelectElement)
-                  .value as AppSettings['language']['source'];
-                void persist((current) => updateLanguage(current, source, current.language.target));
-              }}
-              value={settings.language.source}
-            >
-              {getSourceLanguageOptions().map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Target language</span>
-            <select
-              disabled={saving}
-              onChange={(event) => {
-                const target = (event.currentTarget as HTMLSelectElement)
-                  .value as AppSettings['language']['target'];
-                void persist((current) => updateLanguage(current, current.language.source, target));
-              }}
-              value={settings.language.target}
-            >
-              {getTargetLanguageOptions().map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <button
-          className="secondary-button"
-          disabled={saving || settings.language.source === 'auto'}
-          onClick={() => void persist(swapLanguages)}
-          type="button"
+      <div className="settings-grid">
+        <section
+          className="settings-section settings-section--general"
+          aria-labelledby="general-title"
+          id="general"
         >
-          Swap languages
-        </button>
-        <label className="stacked-label">
-          <span>Translation style</span>
-          <select
-            disabled={saving}
-            onChange={(event) => {
-              const value = (event.currentTarget as HTMLSelectElement).value;
-              void persist((current) => {
-                const selection = parseStyleSelection(value, current);
-                return selection === null ? current : updateSelectedStyle(current, selection);
-              });
-            }}
-            value={styleSelectionValue(settings.styles.selected)}
-          >
-            {getStyleOptions(settings).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-
-      <section className="settings-section" aria-labelledby="behavior-title">
-        <div className="section-heading">
-          <div>
-            <h2 id="behavior-title">Behavior</h2>
-            <p>Choose whether Tynly replaces text immediately or asks first.</p>
+          <div className="section-heading">
+            <div>
+              <h2 id="general-title">General</h2>
+              <p>Choose the language pair and writing style used for every transform.</p>
+            </div>
           </div>
-        </div>
-        <fieldset className="choice-list">
-          <legend>After transformation</legend>
-          <label>
-            <input
-              checked={settings.behavior.afterTransform === 'replace'}
-              disabled={saving}
-              name="after-transform"
-              onChange={() =>
-                void persist((current) => ({
-                  ...current,
-                  behavior: { ...current.behavior, afterTransform: 'replace' }
-                }))
-              }
-              type="radio"
-            />
-            Replace automatically
-          </label>
-          <label>
-            <input
-              checked={settings.behavior.afterTransform === 'preview'}
-              disabled={saving}
-              name="after-transform"
-              onChange={() =>
-                void persist((current) => ({
-                  ...current,
-                  behavior: { ...current.behavior, afterTransform: 'preview' }
-                }))
-              }
-              type="radio"
-            />
-            Show a preview
-          </label>
-        </fieldset>
-        <label className="toggle-row">
-          <input
-            checked={settings.behavior.showUndoNotification}
-            disabled={saving}
-            onChange={(event) => {
-              const showUndoNotification = (event.currentTarget as HTMLInputElement).checked;
-              void persist((current) => ({
-                ...current,
-                behavior: { ...current.behavior, showUndoNotification }
-              }));
-            }}
-            type="checkbox"
-          />
-          Show an Undo notification after automatic replacement
-        </label>
-      </section>
-
-      <section className="settings-section" aria-labelledby="controls-title">
-        <div className="section-heading">
-          <div>
-            <h2 id="controls-title">Controls</h2>
-            <p>Each trigger can be enabled independently.</p>
-          </div>
-        </div>
-        <div className="control-group">
-          <label className="toggle-row">
-            <input
-              checked={settings.controls.shortcut.enabled}
-              disabled={saving}
-              onChange={(event) => {
-                const enabled = (event.currentTarget as HTMLInputElement).checked;
-                void persist((current) => ({
-                  ...current,
-                  controls: {
-                    ...current.controls,
-                    shortcut: { ...current.controls.shortcut, enabled }
-                  }
-                }));
-              }}
-              type="checkbox"
-            />
-            Enable keyboard shortcut
-          </label>
-          <p className="muted" id="keyboard-shortcut-help">
-            Save up to {MAX_SHORTCUT_BINDINGS} shortcuts. Each shortcut must include Alt, Ctrl, or
-            Cmd.
-          </p>
-          <div
-            aria-describedby="keyboard-shortcut-help"
-            aria-label="Keyboard shortcut bindings"
-            className="shortcut-bindings"
-            role="list"
-          >
-            {settings.controls.shortcut.shortcuts.map((shortcut, index) => {
-              const isRecording = recordingShortcut === index;
-              const formattedShortcut = formatShortcut(shortcut);
-              return (
-                <div className="shortcut-binding" key={formattedShortcut} role="listitem">
-                  <span className="shortcut-binding-name">Shortcut {index + 1}</span>
-                  <kbd className="shortcut-binding-value">{formattedShortcut}</kbd>
-                  <button
-                    aria-label={
-                      isRecording
-                        ? `Record keyboard shortcut ${index + 1}`
-                        : `Change keyboard shortcut ${index + 1}, currently ${formattedShortcut}`
-                    }
-                    aria-pressed={isRecording}
-                    className="secondary-button"
-                    disabled={saving}
-                    onClick={() => {
-                      setError(null);
-                      setRecordingShortcut((target) => (target === index ? null : index));
-                    }}
-                    onKeyDown={(event) => {
-                      if (isRecording) {
-                        if (event.code === 'Escape') {
-                          event.preventDefault();
-                          setRecordingShortcut(null);
-                          return;
-                        }
-                        recordKeyboardShortcut(event, index);
-                      }
-                    }}
-                    type="button"
-                  >
-                    {isRecording ? 'Press a key combination' : 'Change'}
-                  </button>
-                  <button
-                    aria-label={`Remove keyboard shortcut ${index + 1}`}
-                    className="danger-button"
-                    disabled={saving || settings.controls.shortcut.shortcuts.length === 1}
-                    onClick={() => removeKeyboardShortcut(index)}
-                    title={
-                      settings.controls.shortcut.shortcuts.length === 1
-                        ? 'At least one keyboard shortcut is required.'
-                        : undefined
-                    }
-                    type="button"
-                  >
-                    Remove
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          {settings.controls.shortcut.shortcuts.length < MAX_SHORTCUT_BINDINGS ? (
-            <button
-              aria-label={
-                recordingShortcut === 'new'
-                  ? 'Record new keyboard shortcut'
-                  : 'Add keyboard shortcut'
-              }
-              aria-pressed={recordingShortcut === 'new'}
-              className="secondary-button"
-              disabled={saving}
-              onClick={() => {
-                setError(null);
-                setRecordingShortcut((target) => (target === 'new' ? null : 'new'));
-              }}
-              onKeyDown={(event) => {
-                if (recordingShortcut === 'new') {
-                  if (event.code === 'Escape') {
-                    event.preventDefault();
-                    setRecordingShortcut(null);
-                    return;
-                  }
-                  recordKeyboardShortcut(event, 'new');
-                }
-              }}
-              type="button"
-            >
-              {recordingShortcut === 'new' ? 'Press a key combination' : 'Add keyboard shortcut'}
-            </button>
-          ) : null}
-          <p aria-live="polite" className="sr-only">
-            {recordingShortcut === null
-              ? ''
-              : recordingShortcut === 'new'
-                ? 'Recording a new keyboard shortcut. Press Alt, Ctrl, or Cmd with another key, or Escape to cancel.'
-                : `Recording keyboard shortcut ${recordingShortcut + 1}. Press Alt, Ctrl, or Cmd with another key, or Escape to cancel.`}
-          </p>
-        </div>
-        <div className="control-group form-grid">
-          <label className="toggle-row">
-            <input
-              checked={settings.controls.fieldButton.enabled}
-              disabled={saving}
-              onChange={(event) => {
-                const enabled = (event.currentTarget as HTMLInputElement).checked;
-                void persist((current) => ({
-                  ...current,
-                  controls: {
-                    ...current.controls,
-                    fieldButton: { ...current.controls.fieldButton, enabled }
-                  }
-                }));
-              }}
-              type="checkbox"
-            />
-            Show a Tynly button in editable fields
-          </label>
-          <label>
-            <span>Field-button position</span>
-            <select
-              disabled={saving}
-              onChange={(event) => {
-                const position = (event.currentTarget as HTMLSelectElement)
-                  .value as AppSettings['controls']['fieldButton']['position'];
-                void persist((current) => ({
-                  ...current,
-                  controls: {
-                    ...current.controls,
-                    fieldButton: { ...current.controls.fieldButton, position }
-                  }
-                }));
-              }}
-              value={settings.controls.fieldButton.position}
-            >
-              <option value="bottom-right">Bottom right</option>
-              <option value="bottom-left">Bottom left</option>
-              <option value="top-right">Top right</option>
-              <option value="top-left">Top left</option>
-            </select>
-          </label>
-          <label>
-            <span>Field-button appearance</span>
-            <select
-              disabled={saving}
-              onChange={(event) => {
-                const appearance = (event.currentTarget as HTMLSelectElement)
-                  .value as AppSettings['controls']['fieldButton']['appearance'];
-                void persist((current) => ({
-                  ...current,
-                  controls: {
-                    ...current.controls,
-                    fieldButton: { ...current.controls.fieldButton, appearance }
-                  }
-                }));
-              }}
-              value={settings.controls.fieldButton.appearance}
-            >
-              <option value="tynly-icon">Tynly icon</option>
-              <option value="monochrome-icon">Monochrome icon</option>
-            </select>
-          </label>
-        </div>
-        <div className="control-group form-grid">
-          <label className="toggle-row">
-            <input
-              checked={settings.controls.selection.enabled}
-              disabled={saving}
-              onChange={(event) => {
-                const enabled = (event.currentTarget as HTMLInputElement).checked;
-                void persist((current) => ({
-                  ...current,
-                  controls: {
-                    ...current.controls,
-                    selection: { ...current.controls.selection, enabled }
-                  }
-                }));
-              }}
-              type="checkbox"
-            />
-            Show a button on text selection
-          </label>
-          <p className="muted">
-            Normal webpage selections always show a copyable result and never change the page.
-          </p>
-        </div>
-      </section>
-
-      <section className="settings-section" aria-labelledby="styles-title">
-        <div className="section-heading">
-          <div>
-            <h2 id="styles-title">Custom styles</h2>
-            <p>Add your own short writing instructions.</p>
-          </div>
-        </div>
-        <CustomStyles
-          disabled={saving}
-          onAdd={addCustomStyle}
-          onDelete={removeCustomStyle}
-          onSave={updateCustomStyle}
-          styles={settings.styles.custom}
-        />
-      </section>
-
-      <section className="settings-section" aria-labelledby="providers-title">
-        <div className="section-heading">
-          <div>
-            <h2 id="providers-title">AI providers</h2>
-            <p>Each provider retains its own model selection and private configuration.</p>
-          </div>
-        </div>
-        <div className="provider-picker">
-          <label>
-            <span>Configured provider</span>
-            <select
-              disabled={saving || profiles.length === 0}
-              onChange={(event) =>
-                setSelectedProfileId((event.currentTarget as HTMLSelectElement).value)
-              }
-              value={selectedProfile?.id ?? ''}
-            >
-              {profiles.length === 0 ? <option value="">No providers yet</option> : null}
-              {profiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name}
-                  {profile.id === settings.providers.activeProfileId ? ' · active' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Add provider</span>
-            <div className="inline-controls">
+          <div className="form-grid">
+            <label>
+              <span>Source language</span>
               <select
-                aria-describedby="provider-catalog-help"
                 disabled={saving}
-                onChange={(event) =>
-                  setNewProviderCatalogEntryId(
-                    (event.currentTarget as HTMLSelectElement).value as ProviderCatalogEntryId
-                  )
-                }
-                value={newProviderCatalogEntryId}
+                onChange={(event) => {
+                  const source = (event.currentTarget as HTMLSelectElement)
+                    .value as AppSettings['language']['source'];
+                  void persist((current) =>
+                    updateLanguage(current, source, current.language.target)
+                  );
+                }}
+                value={settings.language.source}
               >
-                {PROVIDER_CATALOG_GROUPS.map((group) => (
-                  <optgroup key={group.id} label={group.name}>
-                    {PROVIDER_CATALOG.filter((entry) => entry.group === group.id).map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.name}
-                      </option>
-                    ))}
-                  </optgroup>
+                {getSourceLanguageOptions().map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
-              <button disabled={saving} onClick={() => void addProvider()} type="button">
-                Add provider
-              </button>
-            </div>
+            </label>
+            <label>
+              <span>Target language</span>
+              <select
+                disabled={saving}
+                onChange={(event) => {
+                  const target = (event.currentTarget as HTMLSelectElement)
+                    .value as AppSettings['language']['target'];
+                  void persist((current) =>
+                    updateLanguage(current, current.language.source, target)
+                  );
+                }}
+                value={settings.language.target}
+              >
+                {getTargetLanguageOptions().map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <button
+            className="secondary-button"
+            disabled={saving || settings.language.source === 'auto'}
+            onClick={() => void persist(swapLanguages)}
+            type="button"
+          >
+            Swap languages
+          </button>
+          <label className="stacked-label">
+            <span>Translation style</span>
+            <select
+              disabled={saving}
+              onChange={(event) => {
+                const value = (event.currentTarget as HTMLSelectElement).value;
+                void persist((current) => {
+                  const selection = parseStyleSelection(value, current);
+                  return selection === null ? current : updateSelectedStyle(current, selection);
+                });
+              }}
+              value={styleSelectionValue(settings.styles.selected)}
+            >
+              {getStyleOptions(settings).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
-        </div>
-        <p className="muted" id="provider-catalog-help">
-          Quick-start providers add a safe API root automatically. Enter only your key and model,
-          then save and test it.
-        </p>
-        <ProviderEditor
-          active={selectedProfile?.id === settings.providers.activeProfileId}
-          disabled={saving}
-          models={selectedModels}
-          onActivate={activateProvider}
-          onDelete={deleteProvider}
-          onRefreshModels={(profileId) => refreshModels(profileId)}
-          onSave={saveProvider}
-          onTestConnection={(profileId) => testConnection(profileId)}
-          profile={selectedProfile}
-          status={selectedProfile === null ? null : notice}
-        />
-      </section>
+        </section>
 
-      <section className="settings-section privacy-section" aria-labelledby="privacy-title">
-        <div className="section-heading">
-          <div>
-            <h2 id="privacy-title">Privacy</h2>
-            <p>
-              Provider keys, headers, and tokens stay in local extension storage. They are never
-              sent to webpages, inserted into the page, synchronized, or logged by Tynly.
+        <section
+          className="settings-section settings-section--behavior"
+          aria-labelledby="behavior-title"
+          id="behavior"
+        >
+          <div className="section-heading">
+            <div>
+              <h2 id="behavior-title">Behavior</h2>
+              <p>Choose whether Tynly replaces text immediately or asks first.</p>
+            </div>
+          </div>
+          <fieldset className="choice-list">
+            <legend>After transformation</legend>
+            <label>
+              <input
+                checked={settings.behavior.afterTransform === 'replace'}
+                disabled={saving}
+                name="after-transform"
+                onChange={() =>
+                  void persist((current) => ({
+                    ...current,
+                    behavior: { ...current.behavior, afterTransform: 'replace' }
+                  }))
+                }
+                type="radio"
+              />
+              Replace automatically
+            </label>
+            <label>
+              <input
+                checked={settings.behavior.afterTransform === 'preview'}
+                disabled={saving}
+                name="after-transform"
+                onChange={() =>
+                  void persist((current) => ({
+                    ...current,
+                    behavior: { ...current.behavior, afterTransform: 'preview' }
+                  }))
+                }
+                type="radio"
+              />
+              Show a preview
+            </label>
+          </fieldset>
+          <label className="toggle-row">
+            <input
+              checked={settings.behavior.showUndoNotification}
+              disabled={saving}
+              onChange={(event) => {
+                const showUndoNotification = (event.currentTarget as HTMLInputElement).checked;
+                void persist((current) => ({
+                  ...current,
+                  behavior: { ...current.behavior, showUndoNotification }
+                }));
+              }}
+              type="checkbox"
+            />
+            Show an Undo notification after automatic replacement
+          </label>
+        </section>
+
+        <section
+          className="settings-section settings-section--controls"
+          aria-labelledby="controls-title"
+          id="controls"
+        >
+          <div className="section-heading">
+            <div>
+              <h2 id="controls-title">Controls</h2>
+              <p>Each trigger can be enabled independently.</p>
+            </div>
+          </div>
+          <div className="control-group control-group--shortcuts">
+            <label className="toggle-row">
+              <input
+                checked={settings.controls.shortcut.enabled}
+                disabled={saving}
+                onChange={(event) => {
+                  const enabled = (event.currentTarget as HTMLInputElement).checked;
+                  void persist((current) => ({
+                    ...current,
+                    controls: {
+                      ...current.controls,
+                      shortcut: { ...current.controls.shortcut, enabled }
+                    }
+                  }));
+                }}
+                type="checkbox"
+              />
+              Enable keyboard shortcut
+            </label>
+            <p className="muted" id="keyboard-shortcut-help">
+              Save up to {MAX_SHORTCUT_BINDINGS} shortcuts. Each shortcut must include Alt, Ctrl, or
+              Cmd.
+            </p>
+            <div
+              aria-describedby="keyboard-shortcut-help"
+              aria-label="Keyboard shortcut bindings"
+              className="shortcut-bindings"
+              role="list"
+            >
+              {settings.controls.shortcut.shortcuts.map((shortcut, index) => {
+                const isRecording = recordingShortcut === index;
+                const formattedShortcut = formatShortcut(shortcut);
+                return (
+                  <div className="shortcut-binding" key={formattedShortcut} role="listitem">
+                    <span className="shortcut-binding-name">Shortcut {index + 1}</span>
+                    <kbd className="shortcut-binding-value">{formattedShortcut}</kbd>
+                    <button
+                      aria-label={
+                        isRecording
+                          ? `Record keyboard shortcut ${index + 1}`
+                          : `Change keyboard shortcut ${index + 1}, currently ${formattedShortcut}`
+                      }
+                      aria-pressed={isRecording}
+                      className="secondary-button"
+                      disabled={saving}
+                      onClick={() => {
+                        setError(null);
+                        setRecordingShortcut((target) => (target === index ? null : index));
+                      }}
+                      onKeyDown={(event) => {
+                        if (isRecording) {
+                          if (event.code === 'Escape') {
+                            event.preventDefault();
+                            setRecordingShortcut(null);
+                            return;
+                          }
+                          recordKeyboardShortcut(event, index);
+                        }
+                      }}
+                      type="button"
+                    >
+                      {isRecording ? 'Press a key combination' : 'Change'}
+                    </button>
+                    <button
+                      aria-label={`Remove keyboard shortcut ${index + 1}`}
+                      className="danger-button"
+                      disabled={saving || settings.controls.shortcut.shortcuts.length === 1}
+                      onClick={() => removeKeyboardShortcut(index)}
+                      title={
+                        settings.controls.shortcut.shortcuts.length === 1
+                          ? 'At least one keyboard shortcut is required.'
+                          : undefined
+                      }
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {settings.controls.shortcut.shortcuts.length < MAX_SHORTCUT_BINDINGS ? (
+              <button
+                aria-label={
+                  recordingShortcut === 'new'
+                    ? 'Record new keyboard shortcut'
+                    : 'Add keyboard shortcut'
+                }
+                aria-pressed={recordingShortcut === 'new'}
+                className="secondary-button"
+                disabled={saving}
+                onClick={() => {
+                  setError(null);
+                  setRecordingShortcut((target) => (target === 'new' ? null : 'new'));
+                }}
+                onKeyDown={(event) => {
+                  if (recordingShortcut === 'new') {
+                    if (event.code === 'Escape') {
+                      event.preventDefault();
+                      setRecordingShortcut(null);
+                      return;
+                    }
+                    recordKeyboardShortcut(event, 'new');
+                  }
+                }}
+                type="button"
+              >
+                {recordingShortcut === 'new' ? 'Press a key combination' : 'Add keyboard shortcut'}
+              </button>
+            ) : null}
+            <p aria-live="polite" className="sr-only">
+              {recordingShortcut === null
+                ? ''
+                : recordingShortcut === 'new'
+                  ? 'Recording a new keyboard shortcut. Press Alt, Ctrl, or Cmd with another key, or Escape to cancel.'
+                  : `Recording keyboard shortcut ${recordingShortcut + 1}. Press Alt, Ctrl, or Cmd with another key, or Escape to cancel.`}
             </p>
           </div>
-        </div>
-        <p className="muted">
-          Text is sent only after you explicitly use a Tynly control. Sensitive fields such as
-          passwords and payment inputs are excluded before any provider request is made.
-        </p>
-      </section>
+          <div className="control-group control-group--field form-grid">
+            <label className="toggle-row">
+              <input
+                checked={settings.controls.fieldButton.enabled}
+                disabled={saving}
+                onChange={(event) => {
+                  const enabled = (event.currentTarget as HTMLInputElement).checked;
+                  void persist((current) => ({
+                    ...current,
+                    controls: {
+                      ...current.controls,
+                      fieldButton: { ...current.controls.fieldButton, enabled }
+                    }
+                  }));
+                }}
+                type="checkbox"
+              />
+              Show a Tynly button in editable fields
+            </label>
+            <label>
+              <span>Field-button position</span>
+              <select
+                disabled={saving}
+                onChange={(event) => {
+                  const position = (event.currentTarget as HTMLSelectElement)
+                    .value as AppSettings['controls']['fieldButton']['position'];
+                  void persist((current) => ({
+                    ...current,
+                    controls: {
+                      ...current.controls,
+                      fieldButton: { ...current.controls.fieldButton, position }
+                    }
+                  }));
+                }}
+                value={settings.controls.fieldButton.position}
+              >
+                <option value="bottom-right">Bottom right</option>
+                <option value="bottom-left">Bottom left</option>
+                <option value="top-right">Top right</option>
+                <option value="top-left">Top left</option>
+              </select>
+            </label>
+            <label>
+              <span>Field-button appearance</span>
+              <select
+                disabled={saving}
+                onChange={(event) => {
+                  const appearance = (event.currentTarget as HTMLSelectElement)
+                    .value as AppSettings['controls']['fieldButton']['appearance'];
+                  void persist((current) => ({
+                    ...current,
+                    controls: {
+                      ...current.controls,
+                      fieldButton: { ...current.controls.fieldButton, appearance }
+                    }
+                  }));
+                }}
+                value={settings.controls.fieldButton.appearance}
+              >
+                <option value="tynly-icon">Tynly icon</option>
+                <option value="monochrome-icon">Monochrome icon</option>
+              </select>
+            </label>
+          </div>
+          <div className="control-group control-group--selection form-grid">
+            <label className="toggle-row">
+              <input
+                checked={settings.controls.selection.enabled}
+                disabled={saving}
+                onChange={(event) => {
+                  const enabled = (event.currentTarget as HTMLInputElement).checked;
+                  void persist((current) => ({
+                    ...current,
+                    controls: {
+                      ...current.controls,
+                      selection: { ...current.controls.selection, enabled }
+                    }
+                  }));
+                }}
+                type="checkbox"
+              />
+              Show a button on text selection
+            </label>
+            <p className="muted">
+              Normal webpage selections always show a copyable result and never change the page.
+            </p>
+          </div>
+        </section>
+
+        <section
+          className="settings-section settings-section--styles"
+          aria-labelledby="styles-title"
+          id="styles"
+        >
+          <div className="section-heading">
+            <div>
+              <h2 id="styles-title">Custom styles</h2>
+              <p>Add your own short writing instructions.</p>
+            </div>
+          </div>
+          <CustomStyles
+            disabled={saving}
+            onAdd={addCustomStyle}
+            onDelete={removeCustomStyle}
+            onSave={updateCustomStyle}
+            styles={settings.styles.custom}
+          />
+        </section>
+
+        <section
+          className="settings-section settings-section--providers"
+          aria-labelledby="providers-title"
+          id="providers"
+        >
+          <div className="section-heading">
+            <div>
+              <h2 id="providers-title">AI providers</h2>
+              <p>Each provider retains its own model selection and private configuration.</p>
+            </div>
+          </div>
+          <div className="provider-status-card">
+            <div>
+              <span className="provider-status-label">Active provider</span>
+              <strong>{activeProfile?.name ?? 'No provider yet'}</strong>
+            </div>
+            <p className="muted">
+              {activeProfile === null
+                ? 'Add a provider to get started.'
+                : activeProfile.selectedModelId.trim().length === 0
+                  ? 'Choose a model before testing or transforming text.'
+                  : activeProfile.selectedModelId}
+            </p>
+          </div>
+          <div className="provider-picker">
+            <label>
+              <span>Configured provider</span>
+              <select
+                disabled={saving || profiles.length === 0}
+                onChange={(event) =>
+                  setSelectedProfileId((event.currentTarget as HTMLSelectElement).value)
+                }
+                value={selectedProfile?.id ?? ''}
+              >
+                {profiles.length === 0 ? <option value="">No providers yet</option> : null}
+                {profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                    {profile.id === settings.providers.activeProfileId ? ' · active' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Add provider</span>
+              <div className="inline-controls">
+                <select
+                  aria-describedby="provider-catalog-help"
+                  disabled={saving}
+                  onChange={(event) =>
+                    setNewProviderCatalogEntryId(
+                      (event.currentTarget as HTMLSelectElement).value as ProviderCatalogEntryId
+                    )
+                  }
+                  value={newProviderCatalogEntryId}
+                >
+                  {PROVIDER_CATALOG_GROUPS.map((group) => (
+                    <optgroup key={group.id} label={group.name}>
+                      {PROVIDER_CATALOG.filter((entry) => entry.group === group.id).map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                          {entry.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <button disabled={saving} onClick={() => void addProvider()} type="button">
+                  Add provider
+                </button>
+              </div>
+            </label>
+          </div>
+          <p className="muted" id="provider-catalog-help">
+            {providerCatalogEntry?.description ?? 'Choose a provider to begin.'} Quick-start
+            providers add a safe API root automatically; enter your key and model, then save and
+            test it.
+          </p>
+          <ProviderEditor
+            active={selectedProfile?.id === settings.providers.activeProfileId}
+            disabled={saving}
+            models={selectedModels}
+            onActivate={activateProvider}
+            onDelete={deleteProvider}
+            onRefreshModels={(profileId) => refreshModels(profileId)}
+            onSave={saveProvider}
+            onTestConnection={(profileId) => testConnection(profileId)}
+            profile={selectedProfile}
+            status={selectedProfile === null ? null : notice}
+          />
+        </section>
+
+        <section
+          className="settings-section settings-section--privacy privacy-section"
+          aria-labelledby="privacy-title"
+          id="privacy"
+        >
+          <div className="section-heading">
+            <div>
+              <h2 id="privacy-title">Privacy</h2>
+              <p>
+                Provider keys, headers, and tokens stay in local extension storage. They are never
+                sent to webpages, inserted into the page, synchronized, or logged by Tynly.
+              </p>
+            </div>
+          </div>
+          <p className="muted">
+            Text is sent only after you explicitly use a Tynly control. Sensitive fields such as
+            passwords and payment inputs are excluded before any provider request is made.
+          </p>
+        </section>
+      </div>
     </main>
   );
 }
