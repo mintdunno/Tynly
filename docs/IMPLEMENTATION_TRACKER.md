@@ -174,4 +174,21 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 [x] Disable Vite module-preload output for extension pages.
 [x] Verify built popup and Settings HTML contains no module-preload links.
 [x] Run focused automated checks and inspect the change before committing.
-[-] Recheck unpacked Chrome console after rebuilding and reloading the extension.
+[ ] Recheck unpacked Chrome console after rebuilding and reloading the extension.
+
+## Phase 15 — Provider UX research and redesign proposal
+
+[x] Review public Trancy and Immersive Translate product, store, and service-setup materials.
+[x] Audit Tynly's current configured-provider, add-provider, and editor workflow.
+[x] Record verified evidence, design implications, and security boundaries in
+    docs/PROVIDER_UI_RESEARCH.md.
+[x] Add a detailed implementation plan without changing provider behavior or source UI.
+[x] Review and commit the documentation-only research phase.
+
+## Phase 16 — Provider selection redesign
+
+[!] Await explicit approval of the documented provider-selection redesign before implementation.
+[ ] Build the provider home, searchable/category picker, and progressive setup workflow.
+[ ] Preserve existing profiles and implement compact saved-provider management.
+[ ] Add functional, accessibility, responsive-layout, and regression coverage.
+[ ] Review, commit each coherent implementation phase, and complete manual Chrome verification.

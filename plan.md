@@ -4,7 +4,7 @@
 
 Approved on 2026-08-08. This is the canonical working plan for every developer and agent working in this repository. The detailed immutable approval record is mirrored in docs/IMPLEMENTATION_PLAN.md; live task state belongs in docs/IMPLEMENTATION_TRACKER.md.
 
-Current phase: Phase 14 — Extension-page preload compatibility.
+Current phase: Phase 16 — Provider selection redesign (awaiting approval).
 
 ## Operating rules
 
@@ -210,6 +210,36 @@ Expected commit:
 
 - fix: avoid extension preload-world warnings
 
+### Phase 15 — Provider UX research and redesign proposal
+
+Research how established translation extensions present provider choice, audit Tynly's current
+provider workflow, and record an evidence-based redesign proposal before changing source code.
+
+Acceptance: the research distinguishes verified evidence from design inference, explains the
+current provider-flow friction, preserves Tynly's security and multi-provider requirements, and
+gives every developer a concrete approved implementation target.
+
+Expected commit:
+
+- docs: record provider selection UX research
+
+### Phase 16 — Provider selection redesign
+
+After explicit approval, replace the paired provider dropdowns with a clear provider home,
+searchable/category-based picker, progressive setup, meaningful connection state, and compact
+saved-provider management. The normal path must favor a single setup decision; technical
+connection fields remain available but do not dominate the screen.
+
+Acceptance: a new user can choose, configure, test, and activate a recommended provider without
+encountering raw advanced fields; existing saved providers remain intact and manageable; all
+provider operations stay trusted and secret-safe; and accessibility, responsive UI, unit, E2E,
+bundle, and manual Chrome checks pass.
+
+Expected commits:
+
+- feat: redesign provider selection flow
+- test: cover provider selection workflow
+
 ## Phase transition checklist
 
 Before implementation in each phase:
@@ -225,4 +255,4 @@ Before implementation in each phase:
 
 ## Current handoff
 
-Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9's manual Chrome and changelog gates remain pending and will be repeated after the new work. Phase 10 was completed in c674c27. Phase 11 was completed in a39fb42. Phase 12 was completed in ae9611b. Phase 13 remains pending its manual Chrome release verification. Phase 14 is now in progress.
+Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9's manual Chrome and changelog gates remain pending and will be repeated after the new work. Phase 10 was completed in c674c27. Phase 11 was completed in a39fb42. Phase 12 was completed in ae9611b. Phase 13 remains pending its manual Chrome release verification. Phase 14 was committed in 123e9cd and remains pending its manual Chrome recheck. Phase 15 research is complete; Phase 16 awaits explicit approval before source changes.
