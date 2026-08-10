@@ -10,8 +10,14 @@ test('configures a local provider and safely exercises all transform triggers', 
   const settings = await extension.context.newPage();
   await settings.goto(extension.settingsUrl);
 
-  await settings.getByLabel('Add provider').selectOption('ollama');
-  await settings.getByRole('button', { name: 'Add provider' }).click();
+  await settings.getByRole('button', { name: 'Choose a provider' }).click();
+  await settings.getByRole('button', { name: 'Close provider picker' }).click();
+  await expect(settings.getByRole('button', { name: 'Choose a provider' })).toBeFocused();
+
+  await settings.getByRole('button', { name: 'Choose a provider' }).click();
+  await settings.locator('.provider-catalog-card').filter({ hasText: 'Ollama' }).click();
+  await settings.getByRole('button', { name: 'Continue with Ollama' }).click();
+  await expect(settings.getByLabel('Provider name')).toBeFocused();
   await settings.getByLabel('Base URL').fill(mockProvider.baseUrl);
   await settings.getByLabel('Model ID').fill('tynly-mock');
   await settings.getByRole('button', { name: 'Save provider' }).click();

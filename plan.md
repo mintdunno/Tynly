@@ -4,7 +4,7 @@
 
 Approved on 2026-08-08. This is the canonical working plan for every developer and agent working in this repository. The detailed immutable approval record is mirrored in docs/IMPLEMENTATION_PLAN.md; live task state belongs in docs/IMPLEMENTATION_TRACKER.md.
 
-Current phase: Phase 16 — Provider selection redesign (awaiting approval).
+Current phase: Phase 16B — Progressive setup and saved-provider management.
 
 ## Operating rules
 
@@ -225,7 +225,7 @@ Expected commit:
 
 ### Phase 16 — Provider selection redesign
 
-After explicit approval, replace the paired provider dropdowns with a clear provider home,
+Replace the paired provider dropdowns with a clear provider home,
 searchable/category-based picker, progressive setup, meaningful connection state, and compact
 saved-provider management. The normal path must favor a single setup decision; technical
 connection fields remain available but do not dominate the screen.
@@ -237,8 +237,21 @@ bundle, and manual Chrome checks pass.
 
 Expected commits:
 
-- feat: redesign provider selection flow
+- feat: add provider home and picker (Phase 16A complete)
+- feat: streamline provider setup management
 - test: cover provider selection workflow
+
+Execution slices:
+
+1. **Phase 16A — Provider home and picker.** Build a single current-provider home and a searchable,
+   category-based selection surface. Reuse the current catalog and creation rules so profiles remain
+   valid without a migration.
+2. **Phase 16B — Progressive setup and saved-provider management.** Simplify the normal credential
+   path, keep raw connection fields under an explicit advanced disclosure, make a successful test
+   activate the selected provider, and place saved-profile actions in a compact secondary view.
+3. **Phase 16C — Coverage and release verification.** Add focused functional and accessibility
+   tests, run the complete checks, inspect light/dark/narrow UI, and record the manual Chrome
+   verification result.
 
 ## Phase transition checklist
 
@@ -255,4 +268,4 @@ Before implementation in each phase:
 
 ## Current handoff
 
-Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9's manual Chrome and changelog gates remain pending and will be repeated after the new work. Phase 10 was completed in c674c27. Phase 11 was completed in a39fb42. Phase 12 was completed in ae9611b. Phase 13 remains pending its manual Chrome release verification. Phase 14 was committed in 123e9cd and remains pending its manual Chrome recheck. Phase 15 research is complete; Phase 16 awaits explicit approval before source changes.
+Phase 0 was completed in commit c4fd88. Phase 1 was completed in commits 3565685 and 6d71072. Phase 2 was implemented in a3b90cb and security-hardened in 1601a5f. Phase 3 was completed in e7f0030. Phase 4 was completed in 0438b37 and review-hardened in 6706384. Phase 5 was completed in 0d8567e and e199e9e. Phase 6 was completed in 8fb45ac. Phase 7 was completed in 44de658. Phase 8 was completed in 463a384. Phase 9's manual Chrome and changelog gates remain pending and will be repeated after the new work. Phase 10 was completed in c674c27. Phase 11 was completed in a39fb42. Phase 12 was completed in ae9611b. Phase 13 remains pending its manual Chrome release verification. Phase 14 was committed in 123e9cd and remains pending its manual Chrome recheck. Phase 15 research was completed in 6b2e55f. Phase 16 was approved on 2026-08-10; Phase 16A is complete and Phase 16B is next.

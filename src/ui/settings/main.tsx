@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 import type {
   ProviderConnectionTestResult,
@@ -11,13 +11,8 @@ import { serializeAppError } from '../../shared/errors/index.ts';
 import { PRODUCT } from '../../shared/product.ts';
 import { ProviderEditor } from './provider-editor.tsx';
 import { applyProviderDraft, type ProviderDraft } from './provider-draft.ts';
-import {
-  PROVIDER_CATALOG,
-  PROVIDER_CATALOG_GROUPS,
-  createProviderProfileFromCatalog,
-  findProviderCatalogEntry,
-  type ProviderCatalogEntryId
-} from './provider-catalog.ts';
+import { createProviderProfileFromCatalog, type ProviderCatalogEntry } from './provider-catalog.ts';
+import { ProviderHome, ProviderPicker } from './provider-picker.tsx';
 import { ProviderOperationClient } from './provider-operation-client.ts';
 import {
   MAX_SHORTCUT_BINDINGS,
@@ -52,9 +47,9 @@ function SettingsApp() {
   const [modelsByProfile, setModelsByProfile] = useState<
     Readonly<Record<string, readonly ProviderModelInfo[]>>
   >({});
-  const [newProviderCatalogEntryId, setNewProviderCatalogEntryId] =
-    useState<ProviderCatalogEntryId>('openai');
+  const [providerPickerOpen, setProviderPickerOpen] = useState(false);
   const [recordingShortcut, setRecordingShortcut] = useState<ShortcutRecordingTarget>(null);
+  const providerHomeActionRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -116,8 +111,6 @@ function SettingsApp() {
     selectedProfile === null ? [] : (modelsByProfile[selectedProfile.id] ?? []);
   const activeProfile =
     profiles.find((profile) => profile.id === settings.providers.activeProfileId) ?? null;
-  const providerCatalogEntry = findProviderCatalogEntry(newProviderCatalogEntryId);
-
   const saveProvider = async (draft: ProviderDraft): Promise<boolean> => {
     const next = await persist((current) => {
       const previous = current.providers.profiles.find((profile) => profile.id === draft.id);
@@ -194,12 +187,7 @@ function SettingsApp() {
     return result.value;
   };
 
-  const addProvider = async (): Promise<void> => {
-    const entry = findProviderCatalogEntry(newProviderCatalogEntryId);
-    if (entry === null) {
-      setError('Choose a provider before adding it.');
-      return;
-    }
+  const addProvider = async (entry: ProviderCatalogEntry): Promise<boolean> => {
     const profile = createProviderProfileFromCatalog(entry, createSettingsIdentifier('profile'));
     const next = await persist(
       (current) => ({
@@ -211,9 +199,23 @@ function SettingsApp() {
       }),
       'Provider added. Enter its configuration and save it.'
     );
-    if (next !== null) {
-      setSelectedProfileId(profile.id);
+    if (next === null) {
+      return false;
     }
+    setSelectedProfileId(profile.id);
+    setProviderPickerOpen(false);
+    globalThis.requestAnimationFrame(() => {
+      const nameInput = document.getElementById(`provider-${profile.id}-name`);
+      if (nameInput instanceof HTMLInputElement) {
+        nameInput.focus();
+      }
+    });
+    return true;
+  };
+
+  const closeProviderPicker = (): void => {
+    setProviderPickerOpen(false);
+    globalThis.requestAnimationFrame(() => providerHomeActionRef.current?.focus());
   };
 
   const updateCustomStyle = async (style: CustomStyle): Promise<void> => {
@@ -763,84 +765,36 @@ function SettingsApp() {
               <p>Each provider retains its own model selection and private configuration.</p>
             </div>
           </div>
-          <div className="provider-status-card">
-            <div>
-              <span className="provider-status-label">Active provider</span>
-              <strong>{activeProfile?.name ?? 'No provider yet'}</strong>
-            </div>
-            <p className="muted">
-              {activeProfile === null
-                ? 'Add a provider to get started.'
-                : activeProfile.selectedModelId.trim().length === 0
-                  ? 'Choose a model before testing or transforming text.'
-                  : activeProfile.selectedModelId}
-            </p>
-          </div>
-          <div className="provider-picker">
-            <label>
-              <span>Configured provider</span>
-              <select
-                disabled={saving || profiles.length === 0}
-                onChange={(event) =>
-                  setSelectedProfileId((event.currentTarget as HTMLSelectElement).value)
-                }
-                value={selectedProfile?.id ?? ''}
-              >
-                {profiles.length === 0 ? <option value="">No providers yet</option> : null}
-                {profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name}
-                    {profile.id === settings.providers.activeProfileId ? ' · active' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Add provider</span>
-              <div className="inline-controls">
-                <select
-                  aria-describedby="provider-catalog-help"
-                  disabled={saving}
-                  onChange={(event) =>
-                    setNewProviderCatalogEntryId(
-                      (event.currentTarget as HTMLSelectElement).value as ProviderCatalogEntryId
-                    )
-                  }
-                  value={newProviderCatalogEntryId}
-                >
-                  {PROVIDER_CATALOG_GROUPS.map((group) => (
-                    <optgroup key={group.id} label={group.name}>
-                      {PROVIDER_CATALOG.filter((entry) => entry.group === group.id).map((entry) => (
-                        <option key={entry.id} value={entry.id}>
-                          {entry.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-                <button disabled={saving} onClick={() => void addProvider()} type="button">
-                  Add provider
-                </button>
-              </div>
-            </label>
-          </div>
-          <p className="muted" id="provider-catalog-help">
-            {providerCatalogEntry?.description ?? 'Choose a provider to begin.'} Quick-start
-            providers add a safe API root automatically; enter your key and model, then save and
-            test it.
-          </p>
-          <ProviderEditor
-            active={selectedProfile?.id === settings.providers.activeProfileId}
+          <ProviderHome
+            actionButtonRef={providerHomeActionRef}
+            activeProfile={activeProfile}
             disabled={saving}
-            models={selectedModels}
-            onActivate={activateProvider}
-            onDelete={deleteProvider}
-            onRefreshModels={(profileId) => refreshModels(profileId)}
-            onSave={saveProvider}
-            onTestConnection={(profileId) => testConnection(profileId)}
-            profile={selectedProfile}
-            status={selectedProfile === null ? null : notice}
+            onOpenPicker={() => setProviderPickerOpen(true)}
+            onSelectProfile={setSelectedProfileId}
+            profiles={profiles}
+            selectedProfileId={selectedProfile?.id ?? null}
           />
+          {providerPickerOpen ? (
+            <ProviderPicker
+              disabled={saving}
+              onChoose={addProvider}
+              onClose={closeProviderPicker}
+            />
+          ) : null}
+          {selectedProfile === null ? null : (
+            <ProviderEditor
+              active={selectedProfile.id === settings.providers.activeProfileId}
+              disabled={saving}
+              models={selectedModels}
+              onActivate={activateProvider}
+              onDelete={deleteProvider}
+              onRefreshModels={(profileId) => refreshModels(profileId)}
+              onSave={saveProvider}
+              onTestConnection={(profileId) => testConnection(profileId)}
+              profile={selectedProfile}
+              status={notice}
+            />
+          )}
         </section>
 
         <section

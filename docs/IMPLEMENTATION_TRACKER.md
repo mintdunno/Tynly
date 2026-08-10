@@ -187,8 +187,24 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 16 — Provider selection redesign
 
-[!] Await explicit approval of the documented provider-selection redesign before implementation.
-[ ] Build the provider home, searchable/category picker, and progressive setup workflow.
-[ ] Preserve existing profiles and implement compact saved-provider management.
+[x] Receive approval of the documented provider-selection redesign.
+
+### Phase 16A — Provider home and picker
+
+[x] Build the provider home and searchable/category picker without changing profile persistence.
+[x] Preserve existing profiles while routing a new choice through the current catalog factory.
+[x] Add focused picker and provider-home coverage.
+[x] Review and commit the coherent provider-home/picker phase.
+
+### Phase 16B — Progressive setup and saved-provider management
+
+[ ] Streamline normal setup and keep raw connection fields explicitly advanced.
+[ ] Make a successful connection test activate the configured provider.
+[ ] Add compact saved-provider management and its state feedback.
+[ ] Review and commit the coherent provider-management phase.
+
+### Phase 16C — Coverage and release verification
+
 [ ] Add functional, accessibility, responsive-layout, and regression coverage.
-[ ] Review, commit each coherent implementation phase, and complete manual Chrome verification.
+[ ] Run full automated checks and inspect light/dark/narrow UI.
+[ ] Complete manual Chrome verification, update the release notes, and push normally.
