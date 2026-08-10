@@ -1,62 +1,59 @@
-# Tynly
+<div align="center">
+  <img src="assets/brand/tynly-mark.svg" alt="Tynly" width="72" />
 
-> Type anything. Send naturally.
+  <h1>Tynly</h1>
 
-Tynly is a Manifest V3 Chrome extension that turns rough, mixed-language text into natural writing.
-It is designed for explicit, one-at-a-time transformations in normal browser text fields, not for
-continuous grammar checking or full-page translation.
+  <p><strong>Type anything. Send naturally.</strong></p>
 
-## What it does
+  <p>
+    A local-first, provider-neutral Chrome extension that turns rough or mixed-language text into clear,
+    natural writing - right where you write.
+  </p>
 
-- Supports `input`, `textarea`, and supported `contenteditable` editors.
-- Provides three equivalent transform triggers: a field button, selected-text button, and one to
-  three configurable modifier-based shortcuts (default: `Alt + A`).
-- Defaults to Vietnamese to English, Natural style, and automatic replacement.
-- Uses one shared Replace or Preview decision under **Behavior**, then supports Copy and validated
-  Undo workflows consistently across every trigger.
-- Supports OpenAI, Anthropic, Google Gemini, Ollama, OpenAI-compatible, and secure custom JSON APIs,
-  with quick-start presets for OpenRouter, Groq, DeepSeek, Mistral, Together AI, Fireworks,
-  Perplexity, and xAI.
+  <p>
+    <a href="#install">Install from GitHub</a> ·
+    <a href="#your-first-setup">Set up a provider</a> ·
+    <a href="#privacy-first">Privacy</a> ·
+    <a href="#development">Developer guide</a>
+  </p>
+</div>
 
-## Use Tynly
+---
 
-1. Open the extension's **Settings** page and choose a provider from **Recommended**, **All providers**,
-   or **Advanced**.
-2. Enter the required API key and a model ID manually or with **Refresh models**. Expand **Advanced
-   connection** only when you need to change the provider root, headers, or custom API fields; then choose
-   **Save & test**. It saves first, sends one small request to the selected model, and makes the provider
-   active only when that check succeeds.
-3. Focus an editable field, select text, or use any saved shortcut binding.
-4. Choose Replace or Preview once in **Behavior**; when its notification is enabled, Undo is shown after a
-   successful editable replacement.
+## Write naturally, without changing how you work
 
-Tynly skips password, payment, and one-time-code fields, as well as text with a PEM private-key
-header or a Luhn-valid card number. It cannot identify every secret: never paste confidential text
-into a provider request. A page script cannot initiate a transform because content actions require a
-browser-trusted user event.
+Tynly transforms text only when you ask it to. Use the field button, select text on a page, or press a
+shortcut. For editable text, you decide whether the result replaces your text immediately or appears as
+a preview; normal page selections always show a copyable result without changing the page.
 
-## Privacy and permissions
+- Works in normal `input`, `textarea`, and supported `contenteditable` editors.
+- Lets you choose one behavior for editable text: **Replace automatically** or **Show a preview**.
+- Supports one to three configurable shortcuts; `Alt + A` is the default.
+- Each shortcut uses `Alt`, `Ctrl`, or `Cmd` to avoid ordinary typing conflicts.
+- Lets you bring your own AI provider, model, and credentials.
+- Includes Copy and safe Undo for editable-field replacements.
 
-Provider credentials and private configuration are stored locally in the Chrome profile and are
-available only to trusted extension contexts. Content scripts receive a redacted settings snapshot;
-they never receive API keys, custom headers, endpoints, request templates, or provider diagnostics.
+## Install
 
-Provider traffic originates in the background service worker only after an explicit transform,
-model-refresh, or connection-test action. Each normal transform makes one provider request. Tynly
-does not use analytics, cloud accounts, synced credentials, history, polling, or background
-monitoring. When Auto source is selected, detection happens within that single transform request,
-not in a separate request.
+### Install from a GitHub Release
 
-The extension requests `storage` for local configuration and `clipboardWrite` only for an explicit
-Copy action. It has HTTP/HTTPS host access and runs in normal web-page frames so it can work in
-editors and call user-configured providers. Chrome-restricted pages and file URLs are not supported.
+This is the easiest way to use Tynly without installing Node.js or building the project yourself.
+Tynly requires Chrome 102 or newer.
 
-See [the provider guide](docs/PROVIDERS.md) and [architecture notes](docs/ARCHITECTURE.md) for the
-full data-flow and security boundaries.
+1. Open the [Releases page](../../releases) and download the latest
+   `tynly-extension-v*.zip` asset. Do **not** use GitHub's automatic “Source code” ZIP.
+2. Extract the downloaded ZIP to a folder you will keep on your computer.
+3. Open `chrome://extensions` in Chrome.
+4. Turn on **Developer mode**.
+5. Select **Load unpacked** and choose the extracted folder containing `manifest.json`.
+6. Pin Tynly from Chrome's extensions menu, then open **Settings** to configure it.
 
-## Install from source
+> GitHub installs are manual: Chrome will not update the extension automatically. Download and load a
+> newer release when one is available. Some managed work or school browsers may block Developer mode.
 
-Requirements: Node.js 22.13.x, pnpm 10.8.x, and a Chromium-based browser for extension testing.
+### Build it yourself
+
+For a local build, install Node.js `22.13.x`, pnpm `10.8.x`, and a Chromium-based browser.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -64,37 +61,82 @@ pnpm check
 pnpm build
 ```
 
-Then open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the
-generated `dist` directory.
+Then load the generated `dist` folder with the same **Load unpacked** steps above.
 
-## Development checks
+## Your first setup
 
-| Command             | Purpose                                                                   |
-| ------------------- | ------------------------------------------------------------------------- |
-| `pnpm format:check` | Verify repository formatting.                                             |
-| `pnpm typecheck`    | Type-check without emitting files.                                        |
-| `pnpm lint`         | Run static lint checks.                                                   |
-| `pnpm test`         | Run unit tests.                                                           |
-| `pnpm bundle:check` | Build and enforce production bundle budgets.                              |
-| `pnpm test:e2e`     | Run the headed Chromium extension workflow against a local mock provider. |
-| `pnpm check`        | Run typecheck, lint, unit tests, production build, and bundle audit.      |
+1. Open **Tynly Settings** and select a provider from **Recommended**, **All providers**, or
+   **Advanced**.
+2. Enter the API key if the provider needs one, then choose a model. You can enter a model ID manually
+   or use **Refresh models** when it is available.
+3. Select **Save & test**. Tynly saves the profile first, sends one small test request, and activates
+   the provider only after the check succeeds.
+4. Write in any supported editor and use Tynly's field button, selected-text action, or shortcut.
 
-Production size limits and current measurements are in [the bundle audit](docs/BUNDLE_AUDIT.md).
+Most people only need an API key and model ID. **Advanced connection** keeps API roots, headers,
+timeouts, and custom API fields out of the normal path.
 
-## Project references
+> **Save & test** can use a small amount of your provider's quota. Choose **Save without testing** if
+> you only want to store a draft.
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Provider configuration guide](docs/PROVIDERS.md)
-- [Architecture decisions](docs/DECISIONS.md)
-- [Live implementation tracker](docs/IMPLEMENTATION_TRACKER.md)
-- [Approved delivery plan](plan.md)
+## Providers
+
+Choose the service that fits how you work:
+
+- **Direct providers:** OpenAI, Anthropic, Google Gemini, and Ollama.
+- **Compatible providers:** OpenRouter, Groq, DeepSeek, Mistral, Together AI, Fireworks, Perplexity,
+  xAI, or another OpenAI-compatible API.
+- **Advanced setup:** a custom JSON HTTP API with a request template and defined response path.
+
+Each saved provider keeps its own model and private configuration. See the
+[provider configuration guide](docs/PROVIDERS.md) for supported protocols and troubleshooting.
+
+## Privacy first
+
+- Your API keys, headers, endpoints, and provider configuration stay in local Chrome storage.
+- Text is sent only after an explicit Tynly action, model refresh, or connection test.
+- Provider requests run in the extension's background service worker - never in a webpage.
+- Tynly has no analytics, account system, cloud sync, background polling, or continuous AI checking.
+- Saved secrets are masked in Settings and never exposed to page scripts.
+
+Tynly skips password, payment, and one-time-code fields, plus recognized PEM private keys and
+Luhn-valid card numbers. It cannot recognize every secret, so never send confidential text to a
+provider unless you are comfortable with that provider's privacy policy.
+
+When you use a provider, Tynly sends the selected text and the credentials required to authenticate that
+request directly to the provider you configured. That provider's own privacy policy and terms apply.
+
+### Permissions and boundaries
+
+Tynly requests `storage` for local settings and `clipboardWrite` only after you explicitly choose
+**Copy**. It has HTTP/HTTPS host access so it can work in text editors on normal webpages and contact
+your chosen provider. Chrome-internal pages and file URLs are not supported.
+
+## Development
+
+| Command             | What it checks                                                |
+| ------------------- | ------------------------------------------------------------- |
+| `pnpm format:check` | Formatting                                                    |
+| `pnpm typecheck`    | TypeScript types                                              |
+| `pnpm lint`         | Static lint rules                                             |
+| `pnpm test`         | Unit tests                                                    |
+| `pnpm bundle:check` | Production build and bundle-size limits                       |
+| `pnpm test:e2e`     | Headed Chromium extension workflow with a local mock provider |
+| `pnpm check`        | Typecheck, lint, unit tests, build, and bundle audit          |
+
+Before publishing a release, follow the [manual Chrome verification checklist](docs/MANUAL_CHROME_VERIFICATION.md).
+
+## Learn more
+
+- [Provider configuration](docs/PROVIDERS.md)
+- [Architecture and security boundaries](docs/ARCHITECTURE.md)
+- [Bundle audit](docs/BUNDLE_AUDIT.md)
 - [Changelog](CHANGELOG.md)
 
-## Known limitations
+## Known limits
 
-- Settings changes apply to new/reloaded page contexts. The background uses the latest saved provider
-  profile immediately, but an already-open page must be reloaded to refresh its content-control UI.
-- Custom providers must expose a JSON HTTP API; executable templates and arbitrary JavaScript are not
+- Settings changes apply immediately to the background service worker; reload an already-open webpage
+  before expecting its Tynly controls to reflect a settings change.
+- Custom providers must expose a JSON HTTP API. Executable templates and arbitrary JavaScript are not
   supported.
-- Tynly does not intentionally support Chrome-restricted pages, browser internal surfaces, or file
-  URLs.
+- Chrome-restricted pages, browser internal surfaces, and file URLs are intentionally unsupported.
