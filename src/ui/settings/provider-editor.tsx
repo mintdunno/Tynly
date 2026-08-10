@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
-import type { ProviderModelInfo } from '../../core/providers/types.ts';
+import type {
+  ProviderConnectionTestResult,
+  ProviderModelInfo
+} from '../../core/providers/types.ts';
 import type { ProviderProfile } from '../../core/settings/schema.ts';
+import { APP_ERROR_USER_MESSAGES } from '../../shared/errors/index.ts';
 
 import {
   addHeaderDraft,
@@ -19,10 +23,21 @@ export interface ProviderEditorProps {
   readonly onDelete: (profileId: string) => Promise<void>;
   readonly onRefreshModels: (profileId: string) => Promise<void>;
   readonly onSave: (draft: ProviderDraft) => Promise<boolean>;
-  readonly onTestConnection: (profileId: string) => Promise<void>;
+  /** Checks whether the saved profile's selected model accepts a tiny request. */
+  readonly onTestConnection: (profileId: string) => Promise<ProviderConnectionTestResult>;
   readonly profile: ProviderProfile | null;
   readonly status: string | null;
 }
+
+type ConnectionFeedback =
+  | { readonly kind: 'testing' }
+  | { readonly kind: 'connected' }
+  | { readonly kind: 'failed'; readonly message: string };
+
+const FALLBACK_CONNECTION_FAILURE =
+  'Couldn’t connect. Check the API root, key, and selected model, then try again.';
+const SAVE_CONNECTION_FAILURE =
+  'Couldn’t save this provider, so it was not tested. Check the fields and try again.';
 
 /** Progressive, secret-masked editor for one persisted provider profile. */
 export function ProviderEditor({
@@ -41,10 +56,23 @@ export function ProviderEditor({
     profile === null ? null : toProviderDraft(profile)
   );
   const [working, setWorking] = useState(false);
+  const [connectionFeedback, setConnectionFeedback] = useState<ConnectionFeedback | null>(null);
+  const connectionAttempt = useRef(0);
+  const currentProfileId = useRef<string | null>(profile?.id ?? null);
 
   useEffect(() => {
     setDraft(profile === null ? null : toProviderDraft(profile));
   }, [profile]);
+
+  useEffect(() => {
+    const nextProfileId = profile?.id ?? null;
+    if (currentProfileId.current === nextProfileId) {
+      return;
+    }
+    currentProfileId.current = nextProfileId;
+    connectionAttempt.current += 1;
+    setConnectionFeedback(null);
+  }, [profile?.id]);
 
   if (draft === null || profile === null) {
     return <p className="muted">Add a provider to configure Tynly.</p>;
@@ -53,6 +81,18 @@ export function ProviderEditor({
   const capabilities = PROVIDER_CAPABILITIES[draft.kind];
   const fieldPrefix = `provider-${draft.id}`;
   const unavailable = disabled || working;
+
+  const clearConnectionFeedback = () => {
+    connectionAttempt.current += 1;
+    setConnectionFeedback(null);
+  };
+
+  const updateDraft = (
+    next: ProviderDraft | ((current: ProviderDraft | null) => ProviderDraft | null)
+  ) => {
+    clearConnectionFeedback();
+    setDraft(next);
+  };
 
   const saveDraft = async (): Promise<boolean> => {
     setWorking(true);
@@ -85,11 +125,33 @@ export function ProviderEditor({
     }
   };
 
+  const isCurrentConnectionAttempt = (attempt: number, profileId: string) =>
+    connectionAttempt.current === attempt && currentProfileId.current === profileId;
+
   const testConnection = async (): Promise<void> => {
+    const profileId = draft.id;
+    const attempt = connectionAttempt.current + 1;
+    connectionAttempt.current = attempt;
+    setConnectionFeedback({ kind: 'testing' });
     setWorking(true);
     try {
-      if (await onSave(draft)) {
-        await onTestConnection(draft.id);
+      if (!(await onSave(draft))) {
+        if (isCurrentConnectionAttempt(attempt, profileId)) {
+          setConnectionFeedback({ kind: 'failed', message: SAVE_CONNECTION_FAILURE });
+        }
+        return;
+      }
+      const result = await onTestConnection(profileId);
+      if (isCurrentConnectionAttempt(attempt, profileId)) {
+        setConnectionFeedback(
+          result.ok
+            ? { kind: 'connected' }
+            : { kind: 'failed', message: APP_ERROR_USER_MESSAGES[result.error.code] }
+        );
+      }
+    } catch {
+      if (isCurrentConnectionAttempt(attempt, profileId)) {
+        setConnectionFeedback({ kind: 'failed', message: FALLBACK_CONNECTION_FAILURE });
       }
     } finally {
       setWorking(false);
@@ -100,11 +162,11 @@ export function ProviderEditor({
     field: 'name' | 'selectedModelId' | 'timeoutMs' | 'temperature' | 'maxOutputTokens',
     value: string
   ) => {
-    setDraft((current) => (current === null ? null : { ...current, [field]: value }));
+    updateDraft((current) => (current === null ? null : { ...current, [field]: value }));
   };
 
   const updateHeaders = (index: number, field: 'name' | 'value', value: string) => {
-    setDraft((current) => {
+    updateDraft((current) => {
       if (current === null || !hasHeaders(current)) {
         return current;
       }
@@ -118,7 +180,7 @@ export function ProviderEditor({
   };
 
   const addHeader = () => {
-    setDraft((current) =>
+    updateDraft((current) =>
       current === null || !hasHeaders(current)
         ? current
         : { ...current, headers: addHeaderDraft(current.headers) }
@@ -126,7 +188,7 @@ export function ProviderEditor({
   };
 
   const removeHeader = (index: number) => {
-    setDraft((current) =>
+    updateDraft((current) =>
       current === null || !hasHeaders(current)
         ? current
         : {
@@ -143,8 +205,11 @@ export function ProviderEditor({
     >
       <div className="provider-editor-heading">
         <div>
-          <h3>{PROVIDER_KIND_LABELS[draft.kind]}</h3>
-          <p className="muted">Secrets are masked after saving and never appear in this form.</p>
+          <h3>{draft.name}</h3>
+          <p className="muted">
+            {PROVIDER_KIND_LABELS[draft.kind]} · secrets are masked after saving and never appear in
+            this form.
+          </p>
         </div>
         <button
           className="text-button"
@@ -199,7 +264,7 @@ export function ProviderEditor({
         </label>
       </div>
 
-      {renderProviderConnectionFields(draft, setDraft, unavailable)}
+      {renderProviderConnectionFields(draft, updateDraft, unavailable)}
 
       <details className="advanced-settings">
         <summary>Advanced</summary>
@@ -260,7 +325,7 @@ export function ProviderEditor({
           />
         ) : null}
         {draft.kind === 'custom-json' ? (
-          <CustomJsonEditor disabled={unavailable} draft={draft} onChange={setDraft} />
+          <CustomJsonEditor disabled={unavailable} draft={draft} onChange={updateDraft} />
         ) : null}
       </details>
 
@@ -279,14 +344,21 @@ export function ProviderEditor({
           </button>
         ) : null}
         {capabilities.connectionTest ? (
-          <button
-            className="secondary-button"
-            disabled={unavailable}
-            onClick={() => void testConnection()}
-            type="button"
-          >
-            Test connection
-          </button>
+          <div aria-label="Connection check">
+            <small id={`${fieldPrefix}-connection-test-help`}>
+              Saves this provider, then sends one tiny request to the selected model.
+            </small>
+            <button
+              aria-describedby={`${fieldPrefix}-connection-test-help`}
+              className="secondary-button"
+              disabled={unavailable}
+              onClick={() => void testConnection()}
+              type="button"
+            >
+              {connectionFeedback?.kind === 'testing' ? 'Testing…' : 'Save & test'}
+            </button>
+            <ConnectionFeedbackStatus feedback={connectionFeedback} />
+          </div>
         ) : null}
         <button
           className="danger-button"
@@ -304,6 +376,32 @@ export function ProviderEditor({
         </button>
       </div>
     </section>
+  );
+}
+
+function ConnectionFeedbackStatus({ feedback }: { readonly feedback: ConnectionFeedback | null }) {
+  if (feedback === null) {
+    return null;
+  }
+
+  const message =
+    feedback.kind === 'testing'
+      ? 'Testing the selected model…'
+      : feedback.kind === 'connected'
+        ? 'Connected — selected model is usable.'
+        : feedback.message;
+
+  return (
+    <p
+      aria-atomic="true"
+      aria-live="polite"
+      className={
+        feedback.kind === 'connected' || feedback.kind === 'testing' ? 'notice' : 'notice error'
+      }
+      role="status"
+    >
+      {message}
+    </p>
   );
 }
 

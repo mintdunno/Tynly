@@ -65,6 +65,26 @@ export class SettingsStore {
     return this.initialize();
   }
 
+  /**
+   * Reads the current persisted value even when this extension context has a
+   * warm cache. Background provider actions use this after Settings saves so a
+   * delayed storage-change event cannot leave a request using an old profile.
+   */
+  getFresh(): Promise<AppSettings> {
+    return this.enqueueWrite(async () => {
+      await this.initialize();
+
+      const generation = this.cacheGeneration;
+      // Initialization owns durable recovery. A fresh read must not overwrite
+      // a valid Settings save that races with an older malformed raw value.
+      const settings = await this.readPersistedSettings(false);
+      if (this.cacheGeneration === generation) {
+        this.cachedSettings = cloneSettings(settings);
+      }
+      return cloneSettings(settings);
+    });
+  }
+
   async getContentSettings(): Promise<ContentSettingsSnapshot> {
     return toContentSettingsSnapshot(await this.get());
   }
@@ -117,10 +137,22 @@ export class SettingsStore {
   private async initializeInternal(): Promise<AppSettings> {
     try {
       await this.storage.restrictToTrustedContexts();
+      return await this.readPersistedSettings();
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw new AppError('CONFIGURATION', 'Tynly settings could not be loaded.');
+    }
+  }
+
+  private async readPersistedSettings(persistRecovery = true): Promise<AppSettings> {
+    try {
       const raw = await this.storage.get(SETTINGS_STORAGE_KEY);
       const migration = migrateAppSettings(raw);
 
-      if (raw === undefined || migration.migrated || migration.recovered) {
+      if (persistRecovery && (raw === undefined || migration.migrated || migration.recovered)) {
         await this.write(migration.settings);
       }
 

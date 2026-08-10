@@ -187,4 +187,79 @@ describe('ProviderService', () => {
       error: { code: 'UNKNOWN' }
     });
   });
+
+  it('uses freshly persisted credentials and model after another context saves without change events', async () => {
+    const storage = new MemoryStorage();
+    const settingsStore = new SettingsStore(storage);
+    const backgroundStore = new SettingsStore(storage);
+    const discoveredProfiles: Pick<OpenAiProviderProfile, 'apiKey' | 'selectedModelId'>[] = [];
+    const testedProfiles: Pick<OpenAiProviderProfile, 'apiKey' | 'selectedModelId'>[] = [];
+    const transformedProfiles: Pick<OpenAiProviderProfile, 'apiKey' | 'selectedModelId'>[] = [];
+    const provider = createOpenAiProvider({
+      async listModels(profile) {
+        discoveredProfiles.push({
+          apiKey: profile.apiKey,
+          selectedModelId: profile.selectedModelId
+        });
+        return [{ id: 'gpt-fresh-model', label: 'GPT fresh model' }];
+      },
+      async testConnection(profile) {
+        testedProfiles.push({
+          apiKey: profile.apiKey,
+          selectedModelId: profile.selectedModelId
+        });
+        return { ok: true };
+      },
+      async transform(request, profile) {
+        transformedProfiles.push({
+          apiKey: profile.apiKey,
+          selectedModelId: profile.selectedModelId
+        });
+        return { operationId: request.operationId, text: 'Fresh result.' };
+      }
+    });
+    const service = new ProviderService(backgroundStore, new ProviderRegistry([provider]));
+
+    await settingsStore.replace(createSettings());
+    await backgroundStore.get();
+
+    const freshlySavedSettings = createSettings();
+    const freshlySavedProfile = freshlySavedSettings.providers.profiles.find(
+      (profile) => profile.id === 'main'
+    );
+    if (freshlySavedProfile === undefined || freshlySavedProfile.kind !== 'openai') {
+      throw new Error('Expected the main OpenAI profile.');
+    }
+    freshlySavedProfile.apiKey = 'sk-fresh-test-key';
+    freshlySavedProfile.selectedModelId = 'gpt-fresh-model';
+    await settingsStore.replace(freshlySavedSettings);
+
+    const staleBackgroundSettings = await backgroundStore.get();
+    expect(
+      staleBackgroundSettings.providers.profiles.find((profile) => profile.id === 'main')
+    ).toMatchObject({
+      apiKey: 'sk-private-test-key',
+      selectedModelId: 'gpt-main'
+    });
+
+    await expect(service.listModels('main')).resolves.toEqual([
+      { id: 'gpt-fresh-model', label: 'GPT fresh model' }
+    ]);
+    await expect(service.testConnection('main')).resolves.toEqual({ ok: true });
+    await expect(
+      service.transform({
+        operationId: 'fresh-operation',
+        text: 'xin chao',
+        trigger: 'shortcut'
+      })
+    ).resolves.toEqual({ operationId: 'fresh-operation', text: 'Fresh result.' });
+
+    const freshProfile = {
+      apiKey: 'sk-fresh-test-key',
+      selectedModelId: 'gpt-fresh-model'
+    };
+    expect(discoveredProfiles).toEqual([freshProfile]);
+    expect(testedProfiles).toEqual([freshProfile]);
+    expect(transformedProfiles).toEqual([freshProfile]);
+  });
 });

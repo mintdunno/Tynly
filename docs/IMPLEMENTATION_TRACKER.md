@@ -145,12 +145,12 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ## Phase 11 — Friendly provider quick-start and reliable connectivity checks
 
-[ ] Add safe OpenAI-compatible presets for OpenRouter, Groq, DeepSeek, Mistral, Together AI, Fireworks, Perplexity, and xAI.
-[ ] Make preset selection and provider configuration understandable without editing a raw API root.
-[ ] Ensure model refresh and connection testing read the freshly saved provider configuration.
-[ ] Present a clearly scoped Save & test state with credential-safe success and failure feedback.
-[ ] Add preset, connectivity, stale-cache, and provider-editor regression coverage.
-[ ] Review and commit the coherent phase.
+[x] Add safe OpenAI-compatible presets for OpenRouter, Groq, DeepSeek, Mistral, Together AI, Fireworks, Perplexity, and xAI.
+[x] Make preset selection and provider configuration understandable without editing a raw API root.
+[x] Ensure model refresh and connection testing read the freshly saved provider configuration.
+[x] Present a clearly scoped Save & test state with credential-safe success and failure feedback.
+[x] Add preset, connectivity, stale-cache, and provider-editor regression coverage.
+[x] Review and commit the coherent phase.
 
 ## Phase 12 — Minimalist popup and settings design
 

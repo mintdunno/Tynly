@@ -10,16 +10,34 @@ import { SettingsStore } from './settings-store.ts';
 
 class MemoryStorage implements ExtensionLocalStorage {
   readonly values = new Map<string, unknown>();
+  emitChanges = true;
   restricted = false;
+  readError: Error | null = null;
   private readonly changeListeners = new Set<LocalStorageChangeListener>();
+  private pausedRead: { readonly gate: Promise<void>; readonly markStarted: () => void } | null =
+    null;
 
   async get(key: string): Promise<unknown> {
-    return this.values.get(key);
+    if (this.readError !== null) {
+      throw this.readError;
+    }
+
+    const value = this.values.get(key);
+    const pausedRead = this.pausedRead;
+    if (pausedRead !== null) {
+      this.pausedRead = null;
+      pausedRead.markStarted();
+      await pausedRead.gate;
+    }
+
+    return value;
   }
 
   async set(key: string, value: unknown): Promise<void> {
     this.values.set(key, structuredClone(value));
-    this.emitChange(key);
+    if (this.emitChanges) {
+      this.emitChange(key);
+    }
   }
 
   async remove(key: string): Promise<void> {
@@ -32,6 +50,20 @@ class MemoryStorage implements ExtensionLocalStorage {
 
   subscribeToChanges(listener: LocalStorageChangeListener): void {
     this.changeListeners.add(listener);
+  }
+
+  pauseNextRead(): { readonly release: () => void; readonly started: Promise<void> } {
+    let markStarted: () => void = () => undefined;
+    const started = new Promise<void>((resolve) => {
+      markStarted = () => resolve();
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = () => resolve();
+    });
+    this.pausedRead = { gate, markStarted };
+
+    return { release, started };
   }
 
   private emitChange(key: string): void {
@@ -141,6 +173,67 @@ describe('SettingsStore', () => {
     await storage.set(SETTINGS_STORAGE_KEY, externallyUpdated);
 
     await expect(store.get()).resolves.toMatchObject({
+      language: { source: 'en', target: 'en' }
+    });
+  });
+
+  it('keeps trusted storage and safe errors when reading a fresh persisted value', async () => {
+    const storage = new MemoryStorage();
+    const store = new SettingsStore(storage);
+
+    await store.get();
+    storage.readError = new Error('sk-sensitive-storage-read-error');
+
+    await expect(store.getFresh()).rejects.toMatchObject({
+      code: 'CONFIGURATION',
+      message: 'This provider profile needs additional configuration.'
+    });
+    expect(storage.restricted).toBe(true);
+  });
+
+  it('does not let a later local save overwrite its fresh-read cache', async () => {
+    const storage = new MemoryStorage();
+    storage.emitChanges = false;
+    const store = new SettingsStore(storage);
+    await store.replace(createDefaultAppSettings());
+
+    const pausedRead = storage.pauseNextRead();
+    const freshRead = store.getFresh();
+    await pausedRead.started;
+
+    const save = store.update((settings) => ({
+      ...settings,
+      language: { ...settings.language, source: 'en' }
+    }));
+    pausedRead.release();
+
+    await freshRead;
+    await save;
+    await expect(store.get()).resolves.toMatchObject({
+      language: { source: 'en', target: 'en' }
+    });
+  });
+
+  it('does not overwrite a concurrent save while recovering a fresh raw value', async () => {
+    const storage = new MemoryStorage();
+    storage.emitChanges = false;
+    const backgroundStore = new SettingsStore(storage);
+    const settingsStore = new SettingsStore(storage);
+    await backgroundStore.get();
+    await storage.set(SETTINGS_STORAGE_KEY, { malformed: true });
+
+    const pausedRead = storage.pauseNextRead();
+    const freshRead = backgroundStore.getFresh();
+    await pausedRead.started;
+
+    const savedSettings = createDefaultAppSettings();
+    savedSettings.language.source = 'en';
+    const save = settingsStore.replace(savedSettings);
+    await save;
+    pausedRead.release();
+    await freshRead;
+
+    await expect(new SettingsStore(storage).get()).resolves.toMatchObject({
       language: { source: 'en', target: 'en' }
     });
   });

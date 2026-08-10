@@ -1,19 +1,27 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 
-import type { ProviderModelInfo } from '../../core/providers/types.ts';
+import type {
+  ProviderConnectionTestResult,
+  ProviderModelInfo
+} from '../../core/providers/types.ts';
 import { SettingsStore } from '../../core/settings/settings-store.ts';
-import type { AppSettings, CustomStyle, ProviderKind } from '../../core/settings/schema.ts';
+import type { AppSettings, CustomStyle } from '../../core/settings/schema.ts';
 import { serializeAppError } from '../../shared/errors/index.ts';
 import { PRODUCT } from '../../shared/product.ts';
 import { ProviderEditor } from './provider-editor.tsx';
 import { applyProviderDraft, type ProviderDraft } from './provider-draft.ts';
+import {
+  PROVIDER_CATALOG,
+  PROVIDER_CATALOG_GROUPS,
+  createProviderProfileFromCatalog,
+  findProviderCatalogEntry,
+  type ProviderCatalogEntryId
+} from './provider-catalog.ts';
 import { ProviderOperationClient } from './provider-operation-client.ts';
 import {
   MAX_SHORTCUT_BINDINGS,
-  PROVIDER_KIND_LABELS,
   addShortcutBinding,
-  createProviderProfile,
   createSettingsIdentifier,
   formatShortcut,
   getSourceLanguageOptions,
@@ -44,7 +52,8 @@ function SettingsApp() {
   const [modelsByProfile, setModelsByProfile] = useState<
     Readonly<Record<string, readonly ProviderModelInfo[]>>
   >({});
-  const [newProviderKind, setNewProviderKind] = useState<ProviderKind>('openai');
+  const [newProviderCatalogEntryId, setNewProviderCatalogEntryId] =
+    useState<ProviderCatalogEntryId>('openai');
   const [recordingShortcut, setRecordingShortcut] = useState<ShortcutRecordingTarget>(null);
 
   useEffect(() => {
@@ -174,22 +183,21 @@ function SettingsApp() {
     );
   };
 
-  const testConnection = async (profileId: string): Promise<void> => {
-    setError(null);
+  const testConnection = async (profileId: string): Promise<ProviderConnectionTestResult> => {
     const result = await providerOperations.testConnection(profileId);
     if (!result.ok) {
-      setError(result.error.message);
-      return;
+      return { error: result.error, ok: false };
     }
-    if (result.value.ok) {
-      setNotice('Connection successful.');
-      return;
-    }
-    setError(result.value.error.message);
+    return result.value;
   };
 
   const addProvider = async (): Promise<void> => {
-    const profile = createProviderProfile(newProviderKind, createSettingsIdentifier('profile'));
+    const entry = findProviderCatalogEntry(newProviderCatalogEntryId);
+    if (entry === null) {
+      setError('Choose a provider before adding it.');
+      return;
+    }
+    const profile = createProviderProfileFromCatalog(entry, createSettingsIdentifier('profile'));
     const next = await persist(
       (current) => ({
         ...current,
@@ -742,18 +750,23 @@ function SettingsApp() {
             <span>Add provider</span>
             <div className="inline-controls">
               <select
+                aria-describedby="provider-catalog-help"
                 disabled={saving}
                 onChange={(event) =>
-                  setNewProviderKind(
-                    (event.currentTarget as HTMLSelectElement).value as ProviderKind
+                  setNewProviderCatalogEntryId(
+                    (event.currentTarget as HTMLSelectElement).value as ProviderCatalogEntryId
                   )
                 }
-                value={newProviderKind}
+                value={newProviderCatalogEntryId}
               >
-                {(Object.keys(PROVIDER_KIND_LABELS) as ProviderKind[]).map((kind) => (
-                  <option key={kind} value={kind}>
-                    {PROVIDER_KIND_LABELS[kind]}
-                  </option>
+                {PROVIDER_CATALOG_GROUPS.map((group) => (
+                  <optgroup key={group.id} label={group.name}>
+                    {PROVIDER_CATALOG.filter((entry) => entry.group === group.id).map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <button disabled={saving} onClick={() => void addProvider()} type="button">
@@ -762,6 +775,10 @@ function SettingsApp() {
             </div>
           </label>
         </div>
+        <p className="muted" id="provider-catalog-help">
+          Quick-start providers add a safe API root automatically. Enter only your key and model,
+          then save and test it.
+        </p>
         <ProviderEditor
           active={selectedProfile?.id === settings.providers.activeProfileId}
           disabled={saving}

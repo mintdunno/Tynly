@@ -37,7 +37,7 @@ export class ProviderService {
     const controller = this.beginOperation(input.operationId);
 
     try {
-      const settings = await this.settingsStore.get();
+      const settings = await this.settingsStore.getFresh();
       const profile = withSelectedModel(getActiveProfile(settings));
 
       const style = resolveTransformStyle(settings.styles.selected, settings.styles.custom);
@@ -187,7 +187,7 @@ export class ProviderService {
   }
 
   private async getProfile(profileId: string): Promise<ProviderProfile> {
-    const settings = await this.settingsStore.get();
+    const settings = await this.settingsStore.getFresh();
     const profile = settings.providers.profiles.find((candidate) => candidate.id === profileId);
     if (profile === undefined) {
       throw new AppError('CONFIGURATION');

@@ -22,8 +22,8 @@ test('configures a local provider and safely exercises all transform triggers', 
 
   await settings.getByRole('button', { name: 'Refresh models' }).click();
   await expect(settings.getByText('Loaded 1 model.').first()).toBeVisible();
-  await settings.getByRole('button', { name: 'Test connection' }).click();
-  await expect(settings.getByText('Connection successful.').first()).toBeVisible();
+  await settings.getByRole('button', { name: 'Save & test' }).click();
+  await expect(settings.getByText('Connected — selected model is usable.').first()).toBeVisible();
 
   const popup = await extension.context.newPage();
   await popup.goto(extension.popupUrl);
