@@ -12,6 +12,10 @@ import { PRODUCT } from '../../shared/product.ts';
 import { ProviderEditor } from './provider-editor.tsx';
 import { applyProviderDraft, type ProviderDraft } from './provider-draft.ts';
 import { createProviderProfileFromCatalog, type ProviderCatalogEntry } from './provider-catalog.ts';
+import type {
+  ProviderConnectionStatus,
+  ProviderConnectionStatuses
+} from './provider-connection-status.ts';
 import { ProviderHome, ProviderPicker } from './provider-picker.tsx';
 import { ProviderOperationClient } from './provider-operation-client.ts';
 import {
@@ -49,6 +53,8 @@ function SettingsApp() {
   >({});
   const [providerPickerOpen, setProviderPickerOpen] = useState(false);
   const [recordingShortcut, setRecordingShortcut] = useState<ShortcutRecordingTarget>(null);
+  const [providerConnectionStatuses, setProviderConnectionStatuses] =
+    useState<ProviderConnectionStatuses>({});
   const providerHomeActionRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -131,14 +137,36 @@ function SettingsApp() {
     return next !== null;
   };
 
-  const activateProvider = async (profileId: string): Promise<void> => {
-    await persist(
-      (current) => ({
-        ...current,
-        providers: { ...current.providers, activeProfileId: profileId }
-      }),
-      'Active provider updated.'
+  const activateProvider = async (profileId: string): Promise<boolean> => {
+    const next = await persist((current) =>
+      current.providers.profiles.some((profile) => profile.id === profileId)
+        ? {
+            ...current,
+            providers: { ...current.providers, activeProfileId: profileId }
+          }
+        : current
     );
+    const activated = next?.providers.activeProfileId === profileId;
+    if (activated) {
+      setNotice('Active provider updated.');
+    }
+    return activated;
+  };
+
+  const updateProviderConnectionStatus = (
+    profileId: string,
+    status: ProviderConnectionStatus | null
+  ): void => {
+    setProviderConnectionStatuses((current) => {
+      if (status === null) {
+        if (current[profileId] === undefined) {
+          return current;
+        }
+        const { [profileId]: _removed, ...remaining } = current;
+        return remaining;
+      }
+      return current[profileId] === status ? current : { ...current, [profileId]: status };
+    });
   };
 
   const deleteProvider = async (profileId: string): Promise<void> => {
@@ -161,6 +189,7 @@ function SettingsApp() {
       setSelectedProfileId(
         next.providers.activeProfileId ?? next.providers.profiles[0]?.id ?? null
       );
+      updateProviderConnectionStatus(profileId, null);
     }
   };
 
@@ -193,11 +222,11 @@ function SettingsApp() {
       (current) => ({
         ...current,
         providers: {
-          activeProfileId: current.providers.activeProfileId ?? profile.id,
+          activeProfileId: current.providers.activeProfileId,
           profiles: [...current.providers.profiles, profile]
         }
       }),
-      'Provider added. Enter its configuration and save it.'
+      'Provider added. Enter its key and model, then test the connection.'
     );
     if (next === null) {
       return false;
@@ -205,9 +234,9 @@ function SettingsApp() {
     setSelectedProfileId(profile.id);
     setProviderPickerOpen(false);
     globalThis.requestAnimationFrame(() => {
-      const nameInput = document.getElementById(`provider-${profile.id}-name`);
-      if (nameInput instanceof HTMLInputElement) {
-        nameInput.focus();
+      const primaryField = document.getElementById(`provider-${profile.id}-primary`);
+      if (primaryField instanceof HTMLInputElement) {
+        primaryField.focus();
       }
     });
     return true;
@@ -768,6 +797,7 @@ function SettingsApp() {
           <ProviderHome
             actionButtonRef={providerHomeActionRef}
             activeProfile={activeProfile}
+            connectionStatuses={providerConnectionStatuses}
             disabled={saving}
             onOpenPicker={() => setProviderPickerOpen(true)}
             onSelectProfile={setSelectedProfileId}
@@ -787,12 +817,12 @@ function SettingsApp() {
               disabled={saving}
               models={selectedModels}
               onActivate={activateProvider}
+              onConnectionStatusChange={updateProviderConnectionStatus}
               onDelete={deleteProvider}
               onRefreshModels={(profileId) => refreshModels(profileId)}
               onSave={saveProvider}
               onTestConnection={(profileId) => testConnection(profileId)}
               profile={selectedProfile}
-              status={notice}
             />
           )}
         </section>

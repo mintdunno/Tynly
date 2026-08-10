@@ -17,19 +17,20 @@ test('configures a local provider and safely exercises all transform triggers', 
   await settings.getByRole('button', { name: 'Choose a provider' }).click();
   await settings.locator('.provider-catalog-card').filter({ hasText: 'Ollama' }).click();
   await settings.getByRole('button', { name: 'Continue with Ollama' }).click();
-  await expect(settings.getByLabel('Provider name')).toBeFocused();
-  await settings.getByLabel('Base URL').fill(mockProvider.baseUrl);
+  await expect(settings.getByLabel('Model ID')).toBeFocused();
   await settings.getByLabel('Model ID').fill('tynly-mock');
-  await settings.getByRole('button', { name: 'Save provider' }).click();
-  await expect(settings.getByText('Provider saved.').first()).toBeVisible();
+  await settings.locator('summary').filter({ hasText: 'Advanced connection' }).click();
+  await settings.getByLabel('Base URL').fill(mockProvider.baseUrl);
+  await settings.getByRole('button', { name: 'Save & test' }).click();
+  await expect(
+    settings.getByText('Connected — this provider is now active.').first()
+  ).toBeVisible();
 
   await addKeyboardShortcut(settings, 'KeyK');
   await expect(settings.getByText('Alt + K').first()).toBeVisible();
 
   await settings.getByRole('button', { name: 'Refresh models' }).click();
   await expect(settings.getByText('Loaded 1 model.').first()).toBeVisible();
-  await settings.getByRole('button', { name: 'Save & test' }).click();
-  await expect(settings.getByText('Connected — selected model is usable.').first()).toBeVisible();
 
   const popup = await extension.context.newPage();
   await popup.goto(extension.popupUrl);
@@ -88,8 +89,8 @@ test('configures a local provider and safely exercises all transform triggers', 
   await expect(page.locator('#page-text')).toHaveText(originalPageText);
 
   expect(mockProvider.requests.map((request) => request.path)).toEqual([
-    '/api/tags',
     '/api/chat',
+    '/api/tags',
     '/api/chat',
     '/api/chat',
     '/api/chat'

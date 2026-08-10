@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { ProviderProfile } from '../../core/settings/schema.ts';
 
 import { PROVIDER_CATALOG, type ProviderCatalogEntry } from './provider-catalog.ts';
+import type {
+  ProviderConnectionStatus,
+  ProviderConnectionStatuses
+} from './provider-connection-status.ts';
 
 const RECOMMENDED_PROVIDER_IDS = new Set(['openai', 'anthropic', 'gemini', 'openrouter', 'ollama']);
 
@@ -36,6 +40,7 @@ const DEFAULT_ENTRY_ID = 'openai';
 export interface ProviderHomeProps {
   readonly actionButtonRef: Ref<HTMLButtonElement>;
   readonly activeProfile: ProviderProfile | null;
+  readonly connectionStatuses: ProviderConnectionStatuses;
   readonly disabled: boolean;
   readonly onOpenPicker: () => void;
   readonly onSelectProfile: (profileId: string) => void;
@@ -47,39 +52,38 @@ export interface ProviderHomeProps {
 export function ProviderHome({
   actionButtonRef,
   activeProfile,
+  connectionStatuses,
   disabled,
   onOpenPicker,
   onSelectProfile,
   profiles,
   selectedProfileId
 }: ProviderHomeProps) {
-  const activeModel = activeProfile?.selectedModelId.trim() ?? '';
+  const selectedProfile =
+    profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? null;
+  const displayProfile = activeProfile ?? selectedProfile;
+  const readiness = getProviderReadiness(
+    displayProfile,
+    displayProfile === null ? undefined : connectionStatuses[displayProfile.id]
+  );
 
   return (
     <div className="provider-home">
       <div className="provider-home-main">
-        <span className="provider-home-eyebrow">Current provider</span>
-        <h3>{activeProfile?.name ?? 'No provider selected'}</h3>
-        <p className="muted">
-          {activeProfile === null
-            ? 'Choose a provider, then add its key and model.'
-            : activeModel.length === 0
-              ? 'Finish setup by choosing a model, then test the connection.'
-              : `Model: ${activeModel}`}
-        </p>
+        <span className="provider-home-eyebrow">
+          {activeProfile === null && displayProfile !== null
+            ? 'Provider setup'
+            : 'Current provider'}
+        </span>
+        <h3>{displayProfile?.name ?? 'No provider selected'}</h3>
+        <p className="muted">{readiness.description}</p>
       </div>
       <div className="provider-home-actions">
-        <span
-          className={`provider-readiness${activeProfile === null ? ' provider-readiness--empty' : ''}`}
-        >
-          {activeProfile === null
-            ? 'Not set up'
-            : activeModel.length === 0
-              ? 'Needs a model'
-              : 'Model selected'}
+        <span className={`provider-readiness provider-readiness--${readiness.tone}`}>
+          {readiness.label}
         </span>
         <button disabled={disabled} onClick={onOpenPicker} ref={actionButtonRef} type="button">
-          {activeProfile === null ? 'Choose a provider' : 'Add another provider'}
+          {displayProfile === null ? 'Choose a provider' : 'Add another provider'}
         </button>
       </div>
 
@@ -90,17 +94,28 @@ export function ProviderHome({
             {profiles.map((profile) => {
               const selected = profile.id === selectedProfileId;
               const active = profile.id === activeProfile?.id;
+              const savedStatus = getSavedProviderStatus(
+                profile,
+                active,
+                selected,
+                connectionStatuses[profile.id]
+              );
               return (
                 <div key={profile.id} role="listitem">
                   <button
-                    aria-pressed={selected}
+                    aria-label={`Edit ${profile.name}. ${savedStatus}.`}
                     className={`saved-provider-option${selected ? ' saved-provider-option--selected' : ''}`}
                     disabled={disabled}
                     onClick={() => onSelectProfile(profile.id)}
                     type="button"
                   >
-                    <span>{profile.name}</span>
-                    <small>{active ? 'Active' : profile.selectedModelId || 'Needs setup'}</small>
+                    <span className="saved-provider-copy">
+                      <strong>{profile.name}</strong>
+                      <small>{savedStatus}</small>
+                    </span>
+                    <span aria-hidden="true" className="saved-provider-edit">
+                      Edit
+                    </span>
                   </button>
                 </div>
               );
@@ -110,6 +125,102 @@ export function ProviderHome({
       ) : null}
     </div>
   );
+}
+
+function getProviderReadiness(
+  profile: ProviderProfile | null,
+  connectionStatus: ProviderConnectionStatus | undefined
+): {
+  readonly description: string;
+  readonly label: string;
+  readonly tone: 'connected' | 'empty' | 'needs-attention' | 'ready' | 'testing';
+} {
+  if (profile === null) {
+    return {
+      description: 'Choose a provider, then add its key and model.',
+      label: 'Not set up',
+      tone: 'empty'
+    };
+  }
+
+  if (connectionStatus === 'testing') {
+    return {
+      description: 'Checking the selected model now. This uses one small provider request.',
+      label: 'Testing',
+      tone: 'testing'
+    };
+  }
+  if (connectionStatus === 'connected') {
+    return {
+      description: `Connected with ${profile.selectedModelId.trim() || 'the selected model'}.`,
+      label: 'Connected',
+      tone: 'connected'
+    };
+  }
+  if (connectionStatus === 'needs-attention') {
+    return {
+      description:
+        'The last connection check needs attention. Review the key and model, then test again.',
+      label: 'Needs attention',
+      tone: 'needs-attention'
+    };
+  }
+
+  if (profile.kind === 'custom-json') {
+    return {
+      description:
+        'Custom API setup is required. Complete the endpoint and request details under Advanced connection.',
+      label: 'Advanced setup required',
+      tone: 'empty'
+    };
+  }
+  if (hasRequiredApiKey(profile) === false) {
+    return {
+      description: 'Add an API key, choose a model, then test the connection.',
+      label: 'Needs API key',
+      tone: 'empty'
+    };
+  }
+
+  const selectedModelId = profile.selectedModelId.trim();
+  if (selectedModelId.length === 0) {
+    return {
+      description: 'Finish setup by choosing a model, then test the connection.',
+      label: 'Needs a model',
+      tone: 'empty'
+    };
+  }
+  return {
+    description: `Model: ${selectedModelId}. Test the connection when ready.`,
+    label: 'Ready to test',
+    tone: 'ready'
+  };
+}
+
+function hasRequiredApiKey(profile: ProviderProfile): boolean {
+  switch (profile.kind) {
+    case 'openai':
+    case 'openai-compatible':
+    case 'anthropic':
+    case 'gemini':
+      return profile.apiKey.trim().length > 0;
+    case 'ollama':
+    case 'custom-json':
+      return true;
+  }
+}
+
+function getSavedProviderStatus(
+  profile: ProviderProfile,
+  active: boolean,
+  selected: boolean,
+  connectionStatus: ProviderConnectionStatus | undefined
+): string {
+  const connectionLabel = getProviderReadiness(profile, connectionStatus).label;
+  if (active) {
+    return `Active · ${connectionLabel}`;
+  }
+  return selected ? `Editing · ${connectionLabel}` : connectionLabel;
 }
 
 export interface ProviderPickerProps {

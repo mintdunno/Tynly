@@ -198,10 +198,10 @@ Only mark a task complete after its stated acceptance criteria and applicable ch
 
 ### Phase 16B — Progressive setup and saved-provider management
 
-[ ] Streamline normal setup and keep raw connection fields explicitly advanced.
-[ ] Make a successful connection test activate the configured provider.
-[ ] Add compact saved-provider management and its state feedback.
-[ ] Review and commit the coherent provider-management phase.
+[x] Streamline normal setup and keep raw connection fields explicitly advanced.
+[x] Make a successful connection test activate the configured provider.
+[x] Add compact saved-provider management and its state feedback.
+[x] Review and commit the coherent provider-management phase.
 
 ### Phase 16C — Coverage and release verification
 

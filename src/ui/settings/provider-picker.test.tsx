@@ -20,6 +20,7 @@ describe('ProviderHome', () => {
       <ProviderHome
         actionButtonRef={null}
         activeProfile={null}
+        connectionStatuses={{}}
         disabled={false}
         onOpenPicker={onOpenPicker}
         onSelectProfile={() => undefined}
@@ -54,6 +55,7 @@ describe('ProviderHome', () => {
       <ProviderHome
         actionButtonRef={null}
         activeProfile={primary}
+        connectionStatuses={{}}
         disabled={false}
         onOpenPicker={() => undefined}
         onSelectProfile={onSelectProfile}
@@ -68,9 +70,64 @@ describe('ProviderHome', () => {
       throw new Error('Expected the saved-provider disclosure.');
     }
     details.open = true;
-    findButtonContaining(root, 'Local Ollama').click();
+    const localButton = findButtonContaining(root, 'Local Ollama');
+    expect(localButton.getAttribute('aria-label')).toBe('Edit Local Ollama. Ready to test.');
+    expect(root.textContent).toContain('Needs API key');
+    localButton.click();
     expect(onSelectProfile).toHaveBeenCalledWith(local.id);
     expect(root.querySelector('select')).toBeNull();
+  });
+
+  it('shows connection-safe feedback for the active provider', () => {
+    const profile = {
+      ...createProviderProfile('openai', 'primary'),
+      selectedModelId: 'gpt-4.1-mini'
+    };
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    render(
+      <ProviderHome
+        actionButtonRef={null}
+        activeProfile={profile}
+        connectionStatuses={{ [profile.id]: 'connected' }}
+        disabled={false}
+        onOpenPicker={() => undefined}
+        onSelectProfile={() => undefined}
+        profiles={[profile]}
+        selectedProfileId={profile.id}
+      />,
+      root
+    );
+
+    expect(root.textContent).toContain('Connected');
+    expect(root.textContent).not.toContain('gpt-4.1-mini. Test the connection when ready.');
+  });
+
+  it('keeps custom API profiles visibly marked as advanced before testing', () => {
+    const profile = {
+      ...createProviderProfile('custom-json', 'custom'),
+      selectedModelId: 'custom-model'
+    };
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    render(
+      <ProviderHome
+        actionButtonRef={null}
+        activeProfile={profile}
+        connectionStatuses={{}}
+        disabled={false}
+        onOpenPicker={() => undefined}
+        onSelectProfile={() => undefined}
+        profiles={[profile]}
+        selectedProfileId={profile.id}
+      />,
+      root
+    );
+
+    expect(root.textContent).toContain('Advanced setup required');
+    expect(root.textContent).not.toContain('https://api.example.com/transform');
   });
 });
 
